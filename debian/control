@@ -87,6 +87,7 @@ Package: wayfire-dev
 Architecture: any
 Depends:
  ${misc:Depends},
+ wayfire,
 Description: 3D Wayland compositor (development files)
  Wayfire is a 3D Wayland compositor, inspired by Compiz and based on
  wlroots. It aims to create a customizable, extendable and lightweight
