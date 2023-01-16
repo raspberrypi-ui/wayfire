@@ -1,0 +1,9 @@
+usr/include/wayfire/action/
+usr/include/wayfire/condition/
+usr/include/wayfire/lexer/
+usr/include/wayfire/parser/
+usr/include/wayfire/rule/
+usr/include/wayfire/utils.hpp
+usr/include/wayfire/variant.hpp
+usr/lib/*/libwf-utils.so
+usr/lib/*/pkgconfig/wf-utils.pc

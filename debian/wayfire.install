@@ -1,0 +1,4 @@
+usr/bin/
+usr/lib/*/wayfire/
+usr/share/wayfire/
+usr/share/wayland-sessions/

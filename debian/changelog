@@ -1,0 +1,30 @@
+wayfire (0.7.5-1~bpo11+1~rpt1) bullseye; urgency=medium
+
+  * RPi package for GitHub release of 0.7.5
+
+ -- Simon Long <simon@raspberrypi.com>  Mon, 05 Dec 2022 10:15:55 +0000
+
+wayfire (0.7.4-2~bpo11+1~rpt1) bullseye; urgency=medium
+
+  * Bookworm backport
+
+ -- Simon Long <simon@raspberrypi.com>  Wed, 05 Oct 2022 14:18:46 +0100
+
+wayfire (0.7.4-2) unstable; urgency=medium
+
+  * debian/patches: Apply patch to fix package reproducibility.
+    (Closes: #1016486)
+
+ -- Boyuan Yang <byang@debian.org>  Wed, 03 Aug 2022 10:39:50 -0400
+
+wayfire (0.7.4-1) unstable; urgency=medium
+
+  * New upstream release.
+
+ -- Boyuan Yang <byang@debian.org>  Sun, 31 Jul 2022 10:29:34 -0400
+
+wayfire (0.7.3-1) unstable; urgency=medium
+
+  * Initial release. (Closes: #953892)
+
+ -- Boyuan Yang <byang@debian.org>  Thu, 05 May 2022 12:03:58 -0400

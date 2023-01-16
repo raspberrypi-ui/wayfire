@@ -1,0 +1,762 @@
+diff --git a/metadata/meson.build b/metadata/meson.build
+index 2c58cd9..594d2bf 100644
+--- a/metadata/meson.build
++++ b/metadata/meson.build
+@@ -33,3 +33,4 @@ install_data('workarounds.xml', install_dir: conf_data.get('PLUGIN_XML_DIR'))
+ install_data('wrot.xml', install_dir: conf_data.get('PLUGIN_XML_DIR'))
+ install_data('zoom.xml', install_dir: conf_data.get('PLUGIN_XML_DIR'))
+ install_data('scale-title-filter.xml', install_dir: conf_data.get('PLUGIN_XML_DIR'))
++install_data('winshadows.xml', install_dir: conf_data.get('PLUGIN_XML_DIR'))
+diff --git a/metadata/winshadows.xml b/metadata/winshadows.xml
+new file mode 100644
+index 0000000..566f07d
+--- /dev/null
++++ b/metadata/winshadows.xml
+@@ -0,0 +1,61 @@
++<?xml version="1.0"?>
++<wayfire>
++	<plugin name="winshadows">
++		<_short>Window Shadows</_short>
++		<_long>Server Side Shadows for windows on Wayfire</_long>
++		<category>Effects</category>
++		<option name="enabled_views" type="string">
++			<_short>Decoration enabled for specified window types</_short>
++			<_long>Enables window shadows for windows matching the specified criteria.</_long>
++			<default>type is "toplevel" &amp; floating is true</default>
++		</option>
++		<option name="include_undecorated_views" type="bool">
++			<_short>Include windows that have their own decoration</_short>
++			<_long>Enables window shadows on windows that do not request server side decoration.</_long>
++			<default>false</default>
++		</option>
++		<option name="shadow_color" type="color">
++			<_short>Shadow color</_short>
++			<_long>Color of the window shadow.</_long>
++			<default>#00000050</default>
++		</option>
++		<option name="shadow_radius" type="int">
++			<_short>Shadow radius</_short>
++			<_long>Sets the shadow radius in pixels.</_long>
++			<default>60</default>
++		</option>
++		<option name="clip_shadow_inside" type="bool">
++			<_short>Clip shadow to window rectangle</_short>
++			<_long>Does not render the shadow within the rectangular bounds of a window, may look bad on rounded corners.</_long>
++			<default>true</default>
++		</option>
++		<option name="vertical_offset" type="int">
++			<_short>Vertical offset</_short>
++			<_long>Number of pixels to shift the shadow by in vertical direction.</_long>
++			<default>5</default>
++		</option>
++		<option name="horizontal_offset" type="int">
++			<_short>Horizontal offset</_short>
++			<_long>Number of pixels to shift the shadow by in horizontal direction.</_long>
++			<default>0</default>
++		</option>
++		<option name="glow_radius" type="int">
++			<_short>Focus glow radius</_short>
++			<_long>Sets the glow radius around the focused window in pixels. 0 to disable.</_long>
++			<default>0</default>
++		</option>
++		<option name="glow_color" type="color">
++			<_short>Focus glow color</_short>
++			<_long>Color of the glow of the focused window. Try with a bright focus color for the window border decoration.</_long>
++            <default>#97AFCD28</default>
++		</option>
++		<option name="glow_emissivity" type="double">
++			<_short>Glow emissivity</_short>
++			<_long>Controls the blending of the glow, 0 is normal blending, 1 is additive. Set to 0 for shadows and between 0 and 1 for glow effects.</_long>
++			<default>1.0</default>
++			<min>0.0</min>
++			<max>1.0</max>
++			<precision>0.1</precision>
++		</option>
++	</plugin>
++</wayfire>
+diff --git a/plugins/meson.build b/plugins/meson.build
+index 69617c4..c2ad3c6 100644
+--- a/plugins/meson.build
++++ b/plugins/meson.build
+@@ -10,3 +10,4 @@ subdir('blur')
+ subdir('tile')
+ subdir('wm-actions')
+ subdir('scale')
++subdir('winshadows')
+diff --git a/plugins/winshadows/LICENSE b/plugins/winshadows/LICENSE
+new file mode 100644
+index 0000000..5b06bd7
+--- /dev/null
++++ b/plugins/winshadows/LICENSE
+@@ -0,0 +1,21 @@
++The MIT License (MIT)
++
++Copyright (c) 2021 Tim Göttlicher
++
++Permission is hereby granted, free of charge, to any person obtaining a copy
++of this software and associated documentation files (the "Software"), to deal
++in the Software without restriction, including without limitation the rights
++to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
++copies of the Software, and to permit persons to whom the Software is
++furnished to do so, subject to the following conditions:
++
++The above copyright notice and this permission notice shall be included in all
++copies or substantial portions of the Software.
++
++THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
++IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
++FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
++AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
++LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
++OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
++SOFTWARE.
+diff --git a/plugins/winshadows/README.md b/plugins/winshadows/README.md
+new file mode 100644
+index 0000000..f844697
+--- /dev/null
++++ b/plugins/winshadows/README.md
+@@ -0,0 +1,15 @@
++# Window Shadows Plugin for Wayfire
++
++Use this branch to build the plugin on 0.7.x. Use `master` for wayfire master version.
++
++## Compile and install
++If you have installed `wayfire` from your package manager you might have to install `wayfire-devel`.
++
++- Get the sources
++  - `git clone https://github.com/timgott/wayfire-shadows.git`
++- Enter the cloned folder
++  - `cd wayfire-shadows`
++- Configure the project with meson
++  - `meson build --buildtype=release`
++- Compile and install using ninja
++  - `ninja -C build && sudo ninja -C build install`
+diff --git a/plugins/winshadows/deco-shadow.cpp b/plugins/winshadows/deco-shadow.cpp
+new file mode 100644
+index 0000000..98ef179
+--- /dev/null
++++ b/plugins/winshadows/deco-shadow.cpp
+@@ -0,0 +1,145 @@
++#include "deco-shadow.hpp"
++
++wf::winshadows::decoration_shadow_t::decoration_shadow_t() {
++    OpenGL::render_begin();
++    shadow_program.set_simple(
++        OpenGL::compile_program(shadow_vert_shader, shadow_frag_shader)
++    );
++    shadow_glow_program.set_simple(
++        OpenGL::compile_program(shadow_vert_shader, shadow_glow_frag_shader)
++    );
++    OpenGL::render_end();
++}
++
++wf::winshadows::decoration_shadow_t::~decoration_shadow_t() {
++    OpenGL::render_begin();
++    shadow_program.free_resources();
++    shadow_glow_program.free_resources();
++    OpenGL::render_end();
++}
++
++void wf::winshadows::decoration_shadow_t::render(const framebuffer_t& fb, wf::point_t window_origin, const geometry_t& scissor, const bool glow) {
++    float radius = shadow_radius_option;
++
++    wf::color_t color = shadow_color_option;
++
++    // Premultiply alpha for shader
++    glm::vec4 premultiplied = {
++        color.r * color.a,
++        color.g * color.a,
++        color.b * color.a,
++        color.a
++    };
++
++    // Glow color, alpha=0 => additive blending (exploiting premultiplied alpha)
++    wf::color_t glow_color = glow_color_option;
++    glm::vec4 glow_premultiplied = {
++        glow_color.r * glow_color.a,
++        glow_color.g * glow_color.a,
++        glow_color.b * glow_color.a,
++        glow_color.a * (1.0 - glow_emissivity_option)
++    };
++
++    // Enable glow shader only when glow radius > 0 and view is focused
++    bool use_glow = (glow && is_glow_enabled());
++    OpenGL::program_t &program = 
++        use_glow ? shadow_glow_program : shadow_program;
++
++    OpenGL::render_begin(fb);
++    fb.logic_scissor(scissor);
++
++    program.use(wf::TEXTURE_TYPE_RGBA);
++
++    // Compute vertex rectangle geometry
++    wf::geometry_t bounds = outer_geometry + window_origin;
++    float left = bounds.x;
++    float right = bounds.x + bounds.width;
++    float top = bounds.y;
++    float bottom = bounds.y + bounds.height;
++
++    GLfloat vertexData[] = {
++        left, bottom,
++        right, bottom,
++        right, top,
++        left, top
++    };
++
++    glm::mat4 matrix = fb.get_orthographic_projection();
++
++    program.attrib_pointer("position", 2, 0, vertexData);
++    program.uniformMatrix4f("MVP", matrix);
++    program.uniform1f("sigma", radius / 3.0f);
++    program.uniform4f("color", premultiplied);
++
++    float inner_x = window_geometry.x + window_origin.x;
++    float inner_y = window_geometry.y + window_origin.y;
++    float inner_w = window_geometry.width;
++    float inner_h = window_geometry.height;
++    float shadow_x = inner_x + horizontal_offset;
++    float shadow_y = inner_y + vertical_offset;
++    program.uniform2f("lower", shadow_x, shadow_y);
++    program.uniform2f("upper", shadow_x + inner_w, shadow_y + inner_h);
++
++    if (use_glow) {
++        program.uniform1f("glow_sigma", glow_radius_option / 3.0f);
++        program.uniform4f("glow_color", glow_premultiplied);
++        program.uniform2f("glow_lower", inner_x, inner_y);
++        program.uniform2f("glow_upper", inner_x + inner_w, inner_y + inner_h);
++    }
++
++    GL_CALL(glEnable(GL_BLEND));
++    GL_CALL(glBlendFunc(GL_ONE, GL_ONE_MINUS_SRC_ALPHA));
++    GL_CALL(glDrawArrays(GL_TRIANGLE_FAN, 0, 4));
++
++    program.deactivate();
++    OpenGL::render_end();
++}
++
++wf::region_t wf::winshadows::decoration_shadow_t::calculate_region() const {
++    // TODO: geometry and region depending on whether glow is active or not
++    wf::region_t region = wf::region_t(shadow_geometry) | wf::region_t(glow_geometry);
++
++    if (clip_shadow_inside) {
++        region ^= window_geometry;
++    }
++
++    return region;
++}
++
++wf::geometry_t wf::winshadows::decoration_shadow_t::get_geometry() const {
++    return outer_geometry;
++}
++
++void wf::winshadows::decoration_shadow_t::resize(const int window_width, const int window_height) {
++    window_geometry =  {
++        0,
++        0,
++        window_width,
++        window_height
++    };
++
++    shadow_geometry = {
++        -shadow_radius_option + horizontal_offset, -shadow_radius_option + vertical_offset,
++        window_width + shadow_radius_option * 2, window_height + shadow_radius_option * 2
++    };
++
++    glow_geometry = {
++        -glow_radius_option, -glow_radius_option,
++        window_width + glow_radius_option * 2, window_height + glow_radius_option * 2
++    };
++
++    int left = std::min(shadow_geometry.x, glow_geometry.x);
++    int top = std::min(shadow_geometry.y, glow_geometry.y);
++    int right = std::max(shadow_geometry.x + shadow_geometry.width, glow_geometry.x + glow_geometry.width);
++    int bottom = std::max(shadow_geometry.y + shadow_geometry.height, glow_geometry.y + glow_geometry.height);
++    outer_geometry = {
++        left,
++        top,
++        right - left,
++        bottom - top
++    };
++}
++
++bool wf::winshadows::decoration_shadow_t::is_glow_enabled() const {
++    return glow_radius_option > 0;
++}
+diff --git a/plugins/winshadows/deco-shadow.glsl.cpp b/plugins/winshadows/deco-shadow.glsl.cpp
+new file mode 100644
+index 0000000..15e4a19
+--- /dev/null
++++ b/plugins/winshadows/deco-shadow.glsl.cpp
+@@ -0,0 +1,83 @@
++// GLSL as cpp string constant (.glsl extension for syntax highlighting)
++#include "deco-shadow.hpp"
++
++
++/* Vertex shader */
++
++const std::string wf::winshadows::decoration_shadow_t::shadow_vert_shader = 
++R"(
++#version 100
++
++attribute mediump vec2 position;
++varying mediump vec2 uvpos;
++
++uniform mat4 MVP;
++
++void main() {
++    gl_Position = MVP * vec4(position.xy, 0.0, 1.0);
++    uvpos = position.xy;
++})";
++
++
++
++/* Base fragment shader definitions */
++
++const std::string box_shadow_fragment_header = 
++R"(
++#version 100
++precision mediump float;
++varying vec2 uvpos;
++uniform vec2 lower;
++uniform vec2 upper;
++uniform vec4 color;
++uniform float sigma;
++
++// Adapted from http://madebyevan.com/shaders/fast-rounded-rectangle-shadows/
++// License: CC0 (http://creativecommons.org/publicdomain/zero/1.0/)
++
++// This approximates the error function, needed for the gaussian integral
++vec4 erf(vec4 x) {
++  vec4 s = sign(x), a = abs(x);
++  x = 1.0 + (0.278393 + (0.230389 + 0.078108 * (a * a)) * a) * a;
++  x *= x;
++  return s - s / (x * x);
++}
++
++// Return the mask for the shadow of a box from lower to upper
++float boxShadow(vec2 lower, vec2 upper, vec2 point, float sigma) {
++  vec4 query = vec4(lower - point, upper - point);
++  vec4 integral = 0.5 + 0.5 * erf(query * (sqrt(0.5) / sigma));
++  return (integral.z - integral.x) * (integral.w - integral.y);
++}
++)";
++
++
++/* Rectangle shadow fragment shader */
++
++const std::string wf::winshadows::decoration_shadow_t::shadow_frag_shader =
++box_shadow_fragment_header + // include header and function definitions
++R"(
++void main()
++{
++    gl_FragColor = color * boxShadow(lower, upper, uvpos, sigma);
++}
++)";
++
++
++/* Rectangle shadow+glow fragment shader */
++
++const std::string wf::winshadows::decoration_shadow_t::shadow_glow_frag_shader =
++box_shadow_fragment_header + // include header and function definitions
++R"(
++uniform vec4 glow_color;
++uniform float glow_sigma;
++uniform vec2 glow_lower;
++uniform vec2 glow_upper;
++
++void main()
++{
++    gl_FragColor =
++        color * boxShadow(lower, upper, uvpos, sigma) +
++        glow_color * boxShadow(glow_lower, glow_upper, uvpos, glow_sigma);
++}
++)";
+diff --git a/plugins/winshadows/deco-shadow.hpp b/plugins/winshadows/deco-shadow.hpp
+new file mode 100644
+index 0000000..629b84c
+--- /dev/null
++++ b/plugins/winshadows/deco-shadow.hpp
+@@ -0,0 +1,46 @@
++#pragma once
++#include <wayfire/option-wrapper.hpp>
++#include <wayfire/opengl.hpp>
++
++namespace wf::winshadows {
++/**
++ * A  class that can render shadows.
++ * It manages the shader and calculates the necessary padding.
++ */
++class decoration_shadow_t {
++    public:
++        decoration_shadow_t();
++        ~decoration_shadow_t();
++
++        void render(const framebuffer_t& fb, wf::point_t origin, const geometry_t& scissor, const bool glow);
++        void resize(const int width, const int height);
++        wf::region_t calculate_region() const;
++        wf::geometry_t get_geometry() const;
++        bool is_glow_enabled() const;
++
++    private:
++        OpenGL::program_t shadow_program;
++        OpenGL::program_t shadow_glow_program;
++        wf::geometry_t glow_geometry;
++        wf::geometry_t shadow_geometry;
++        wf::geometry_t outer_geometry;
++        wf::geometry_t window_geometry;
++        wlr_box calculate_padding(const wf::geometry_t window_geometry) const;
++
++        wf::option_wrapper_t<wf::color_t> shadow_color_option { "winshadows/shadow_color" };
++        wf::option_wrapper_t<int> shadow_radius_option { "winshadows/shadow_radius" };
++        wf::option_wrapper_t<bool> clip_shadow_inside { "winshadows/clip_shadow_inside" };
++        wf::option_wrapper_t<int> vertical_offset { "winshadows/vertical_offset" };
++        wf::option_wrapper_t<int> horizontal_offset { "winshadows/horizontal_offset" };
++
++        wf::option_wrapper_t<wf::color_t> glow_color_option { "winshadows/glow_color" };
++        wf::option_wrapper_t<int> glow_radius_option { "winshadows/glow_radius" };
++        wf::option_wrapper_t<double> glow_emissivity_option { "winshadows/glow_emissivity" };
++
++        static const std::string shadow_vert_shader;
++        static const std::string shadow_frag_shader;
++        static const std::string shadow_glow_frag_shader;
++};
++
++}
++
+diff --git a/plugins/winshadows/meson.build b/plugins/winshadows/meson.build
+new file mode 100644
+index 0000000..5a75456
+--- /dev/null
++++ b/plugins/winshadows/meson.build
+@@ -0,0 +1,6 @@
++shadows = shared_module('winshadows', 
++	['shadows.cpp', 'shadow-surface.cpp', 'deco-shadow.cpp', 'deco-shadow.glsl.cpp'],
++    	include_directories: [wayfire_api_inc, wayfire_conf_inc, plugins_common_inc],
++    	dependencies: [wlroots, pixman, wf_protos, wfconfig, cairo, pango, pangocairo],
++    	install: true,
++    	install_dir: join_paths( get_option( 'libdir' ), 'wayfire' ))
+diff --git a/plugins/winshadows/shadow-surface.cpp b/plugins/winshadows/shadow-surface.cpp
+new file mode 100644
+index 0000000..edc54ed
+--- /dev/null
++++ b/plugins/winshadows/shadow-surface.cpp
+@@ -0,0 +1,73 @@
++#include "shadow-surface.hpp"
++
++namespace wf::winshadows {
++
++shadow_decoration_surface::shadow_decoration_surface( wayfire_view view ) {
++    this->view = view;
++    view->connect_signal("subsurface-removed", &on_subsurface_removed);
++    view->connect_signal("geometry-changed", &on_geometry_changed);
++
++    update_geometry();
++}
++
++shadow_decoration_surface::~shadow_decoration_surface() {
++    view->disconnect_signal(&on_subsurface_removed);
++    view->disconnect_signal(&on_geometry_changed);
++}
++
++/* wf::surface_interface_t implementation */
++bool shadow_decoration_surface::is_mapped() const {
++    return _mapped;
++}
++
++wf::point_t shadow_decoration_surface::get_offset() {
++
++    return wf::origin(surface_geometry);
++}
++
++wf::dimensions_t shadow_decoration_surface::get_size() const {
++
++    return wf::dimensions(surface_geometry);
++}
++
++void shadow_decoration_surface::simple_render( const wf::framebuffer_t& fb, int, int, const wf::region_t& damage ) {
++    wf::point_t window_origin = wf::origin(view->get_wm_geometry());
++    wf::region_t frame = this->shadow_region + window_origin;
++    frame &= damage;
++
++    for (const auto& box : frame)
++    {
++        shadow.render(fb, window_origin, wlr_box_from_pixman_box(box), view->activated);
++    }
++    _was_activated = view->activated;
++}
++
++bool shadow_decoration_surface::needs_redraw() {
++    if (shadow.is_glow_enabled()) {
++        return view->activated != _was_activated;
++    }
++    return false;
++}
++
++bool shadow_decoration_surface::accepts_input( int32_t, int32_t )
++{
++    return false;
++}
++
++void shadow_decoration_surface::update_geometry() {
++    wf::geometry_t view_geometry = view->get_wm_geometry();
++    shadow.resize(view_geometry.width, view_geometry.height);
++
++    wf::point_t frame_offset = wf::origin(view->get_wm_geometry()) - wf::origin(view->get_output_geometry());
++
++    surface_geometry = shadow.get_geometry() + frame_offset;
++    this->shadow_region = shadow.calculate_region();
++}
++
++void shadow_decoration_surface::unmap() {
++
++    _mapped = false;
++    wf::emit_map_state_change( this );
++}
++
++}
+diff --git a/plugins/winshadows/shadow-surface.hpp b/plugins/winshadows/shadow-surface.hpp
+new file mode 100644
+index 0000000..57f17b3
+--- /dev/null
++++ b/plugins/winshadows/shadow-surface.hpp
+@@ -0,0 +1,65 @@
++#pragma once
++
++#define GLM_FORCE_RADIANS
++#include <glm/gtc/matrix_transform.hpp>
++
++#include <linux/input-event-codes.h>
++
++#include <wayfire/view.hpp>
++#include <wayfire/output.hpp>
++#include <wayfire/opengl.hpp>
++#include <wayfire/core.hpp>
++#include <wayfire/signal-definitions.hpp>
++#include "deco-shadow.hpp"
++
++namespace wf::winshadows {
++class shadow_decoration_surface : public wf::surface_interface_t {
++
++    bool _mapped = true;
++    int _was_activated = 1; // used to check whether redrawing on focus is necessary
++
++    wf::geometry_t surface_geometry;
++
++    wayfire_view view;
++
++    int width = 100, height = 100;
++    wf::winshadows::decoration_shadow_t shadow;
++    wf::region_t shadow_region;
++
++    wf::signal_connection_t on_subsurface_removed = [&] (auto data) {
++
++        auto ev = static_cast<wf::subsurface_removed_signal*>(data);
++        if (ev->subsurface.get() == this) {
++            unmap();
++        }
++    };
++
++    wf::signal_connection_t on_geometry_changed = [&] (auto) {
++        update_geometry();
++    };
++
++  public:
++    shadow_decoration_surface( wayfire_view view );
++
++    virtual ~shadow_decoration_surface();
++
++
++    virtual bool is_mapped() const final;
++
++    wf::point_t get_offset() final;
++
++    virtual wf::dimensions_t get_size() const final;
++
++    virtual void simple_render( const wf::framebuffer_t& fb, int x, int y, const wf::region_t& damage ) override;
++
++    bool accepts_input( int32_t sx, int32_t sy ) override;
++
++    void unmap();
++
++    void update_geometry();
++
++    bool needs_redraw();
++};
++
++}
++
+diff --git a/plugins/winshadows/shadows.cpp b/plugins/winshadows/shadows.cpp
+new file mode 100644
+index 0000000..4d9dee0
+--- /dev/null
++++ b/plugins/winshadows/shadows.cpp
+@@ -0,0 +1,169 @@
++#include <wayfire/object.hpp>
++#include <wayfire/plugin.hpp>
++#include <wayfire/view.hpp>
++#include <wayfire/matcher.hpp>
++#include <wayfire/workspace-manager.hpp>
++#include <wayfire/output.hpp>
++#include <wayfire/signal-definitions.hpp>
++
++#include "shadow-surface.hpp"
++
++struct view_shadow_data : wf::custom_data_t {
++    view_shadow_data(nonstd::observer_ptr<wf::winshadows::shadow_decoration_surface> shadow_ptr) : shadow_ptr(shadow_ptr) {};
++
++    nonstd::observer_ptr<wf::winshadows::shadow_decoration_surface> shadow_ptr;
++};
++
++namespace wayfire_shadows_globals {
++    // Global because focus has to be tracked across outputs, but there is an instance of the plugin per output
++    wayfire_view last_focused_view = nullptr;
++}
++
++class wayfire_shadows : public wf::plugin_interface_t
++{
++    const std::string surface_data_name = "shadow_surface";
++
++    wf::view_matcher_t enabled_views {"winshadows/enabled_views"};
++    wf::option_wrapper_t<bool> include_undecorated_views {"winshadows/include_undecorated_views"};
++
++    wf::signal_connection_t view_updated{
++        [=] (wf::signal_data_t *data)
++        {
++            update_view_decoration(get_signaled_view(data));
++        }
++    };
++
++    wf::signal_connection_t focus_changed{
++        [=] (wf::signal_data_t *data)
++        {
++            wayfire_view focused_view = get_signaled_view(data);
++            wayfire_view last_focused = wayfire_shadows_globals::last_focused_view;
++            if (last_focused != nullptr) {
++                update_view_decoration(last_focused);
++            }
++            if (focused_view != nullptr) {
++                update_view_decoration(focused_view);
++            }
++            wayfire_shadows_globals::last_focused_view = focused_view;
++        }
++    };
++
++    wf::signal_connection_t view_unmapped{
++        [=] (wf::signal_data_t *data)
++        {
++            wayfire_view view = get_signaled_view(data);
++            if (view == wayfire_shadows_globals::last_focused_view) {
++                wayfire_shadows_globals::last_focused_view = nullptr;
++            }
++        }
++    };
++
++  public:
++    void init() override
++    {
++        grab_interface->name = "window-shadows";
++        grab_interface->capabilities = 0;
++
++        output->connect_signal("view-mapped", &view_updated);
++        output->connect_signal("view-decoration-state-updated", &view_updated);
++        output->connect_signal("view-tiled", &view_updated);
++        output->connect_signal("view-focused", &focus_changed);
++        output->connect_signal("view-unmapped", &view_unmapped);
++
++        for (auto& view :
++             output->workspace->get_views_in_layer(wf::ALL_LAYERS))
++        {
++            update_view_decoration(view);
++        }
++    }
++
++    /**
++     * Checks whether the given view has server side decoration and is in
++     * the white list.
++     *
++     * @param view The view to match
++     * @return Whether the view should get a shadow.
++     */
++    bool is_view_shadow_enabled(wayfire_view view)
++    {
++        return enabled_views.matches(view) && (is_view_decorated(view) || include_undecorated_views);
++    }
++
++    bool is_view_decorated(wayfire_view view)
++    {
++        return view->should_be_decorated();
++    }
++
++    wf::wl_idle_call idle_deactivate;
++    void update_view_decoration(wayfire_view view)
++    {
++        if (is_view_shadow_enabled(view))
++        {
++            auto shadow_data = view->get_data<view_shadow_data>(surface_data_name);
++            if (!shadow_data) {
++                // No shadow yet, create it now.
++                if (output->activate_plugin(grab_interface))
++                {
++                    init_view(view);
++                    idle_deactivate.run_once([this] ()
++                    {
++                        output->deactivate_plugin(grab_interface);
++                    });
++                }
++            }
++            else {
++                // Shadow already exists, redraw if necessary,
++                // e.g. view was focused and glow is enabled.
++                if (shadow_data->shadow_ptr->needs_redraw()) {
++                    view->damage();
++                }
++            }
++        } else
++        {
++            deinit_view(view);
++        }
++    }
++
++    bool is_view_initialized( wayfire_view view ) {
++        return view->has_data(surface_data_name);
++    }
++
++    void init_view( wayfire_view view )
++    {
++        auto surf = std::make_unique<wf::winshadows::shadow_decoration_surface>( view );
++
++        auto view_data = std::make_unique<view_shadow_data>(surf.get());
++
++        view->store_data( 
++            std::move(view_data), 
++            surface_data_name
++        );
++
++        view->add_subsurface(std::move( surf ), true );
++        view->damage();
++    }
++
++    void deinit_view( wayfire_view view )
++    {
++        auto view_data = view->get_data<view_shadow_data>(surface_data_name);
++        if (view_data != nullptr) {
++            view->damage();
++            view->remove_subsurface(view_data->shadow_ptr);
++            view->erase_data(surface_data_name);
++        }
++    }
++
++    void fini() override
++    {
++        output->disconnect_signal(&view_updated);
++        output->disconnect_signal(&focus_changed);
++        output->disconnect_signal(&view_unmapped);
++
++        for (auto& view : output->workspace->get_views_in_layer(wf::ALL_LAYERS))
++        {
++            deinit_view(view);
++        }
++    }
++};
++
++DECLARE_WAYFIRE_PLUGIN(wayfire_shadows);

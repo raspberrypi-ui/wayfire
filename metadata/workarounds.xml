@@ -1,0 +1,35 @@
+<?xml version="1.0"?>
+<wayfire>
+	<plugin name="workarounds">
+		<_short>Workarounds</_short>
+		<_long>Some hacks that might be required to make things work.</_long>
+		<category>Utility</category>
+		<option name="app_id_mode" type="string">
+			<_short>Application ID mode</_short>
+			<_long>Specifies the application ID mode.</_long>
+			<default>stock</default>
+			<desc>
+				<value>stock</value>
+				<_name>Stock</_name>
+			</desc>
+			<desc>
+				<value>gtk-shell</value>
+				<_name>GTK Shell</_name>
+			</desc>
+			<desc>
+				<value>full</value>
+				<_name>Full</_name>
+			</desc>
+		</option>
+		<option name="all_dialogs_modal" type="bool">
+			<_short>Make all dialogs modal</_short>
+			<_long>If false, the main window can be focused even if it has a dialog. The dialog is nevertheless kept on top of the main window. Kwin defaults to false.</_long>
+			<default>true</default>
+		</option>
+    <option name="dynamic_repaint_delay" type="bool">
+      <_short>Allow dynamic repaint delay</_short>
+      <_long>If true, allows Wayfire to dynamically recalculate its max_render_time, i.e allow render time higher than max_render_time.</_long>
+      <default>false</default>
+    </option>
+	</plugin>
+</wayfire>
