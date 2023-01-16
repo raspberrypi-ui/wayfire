@@ -7,6 +7,9 @@
 #include <wayfire/core.hpp>
 
 #include <sys/inotify.h>
+#include <sys/sendfile.h>
+#include <sys/stat.h>
+#include <fcntl.h>
 #include <unistd.h>
 
 #define INOT_BUF_SIZE (sizeof(inotify_event) + NAME_MAX + 1)
@@ -96,6 +99,24 @@ class dynamic_ini_config_t : public wf::config_backend_t
         config_file = choose_cfg_file(cfg_file);
         LOGI("Using config file: ", config_file.c_str());
         setenv(CONFIG_FILE_ENV, config_file.c_str(), 1);
+
+        /* check if the config file exists - if not, copy the defaults to it */
+        if (access (config_file.c_str(), F_OK) && !access (SYSCONFDIR "/wayfire/defaults.ini", F_OK))
+        {
+            int fs = open (SYSCONFDIR "/wayfire/defaults.ini", O_RDONLY);
+            if (fs >= 0)
+            {
+                struct stat stat_buf;
+                fstat (fs, &stat_buf);
+                int fd = open (config_file.c_str(), O_WRONLY | O_CREAT, S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
+                if (fd >= 0)
+                {
+                    sendfile (fd, fs, NULL, stat_buf.st_size);
+                    close (fd);
+                }
+                close (fs);
+            }
+        }
 
         config = wf::config::build_configuration(
             get_xml_dirs(), SYSCONFDIR "/wayfire/defaults.ini", config_file);
