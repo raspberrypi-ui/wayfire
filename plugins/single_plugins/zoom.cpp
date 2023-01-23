@@ -34,11 +34,12 @@ class wayfire_zoom_screen : public wf::plugin_interface_t
 
     void update_zoom_target(float delta)
     {
-        float target = progression.end;
         if (fixed)
         {
             fixed = false;
+            progression.set(fixed_zoom, fixed_zoom);
         }
+        float target = progression.end;
         target -= target * delta * speed;
         target  = wf::clamp(target, 1.0f, 50.0f);
 
