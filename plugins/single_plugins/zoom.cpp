@@ -12,6 +12,7 @@ class wayfire_zoom_screen : public wf::plugin_interface_t
     wf::option_wrapper_t<double> fixed_zoom{"zoom/fixed_zoom"};
     wf::animation::simple_animation_t progression{smoothing_duration};
     bool hook_set = false;
+    bool fixed = false;
 
   public:
     void init() override
@@ -34,6 +35,10 @@ class wayfire_zoom_screen : public wf::plugin_interface_t
     void update_zoom_target(float delta)
     {
         float target = progression.end;
+        if (fixed)
+        {
+            fixed = false;
+        }
         target -= target * delta * speed;
         target  = wf::clamp(target, 1.0f, 50.0f);
 
@@ -85,12 +90,13 @@ class wayfire_zoom_screen : public wf::plugin_interface_t
         x = box.x;
         y = h - box.y;
 
-        const float scale = (progression - 1) / progression;
+        const float param = fixed ? fixed_zoom : progression;
+        const float scale = (param - 1) / param;
 
         // The target width and height are truncated here so that `x1+tw` and
         // `x1` round to GLint in tandem for glBlitFramebuffer(). This keeps the
         // aspect ratio constant while panning around.
-        const GLint tw = w / progression, th = h / progression;
+        const GLint tw = w / param, th = h / param;
 
         const float x1 = x * scale;
         const float y1 = y * scale;
@@ -102,63 +108,33 @@ class wayfire_zoom_screen : public wf::plugin_interface_t
             GL_COLOR_BUFFER_BIT, GL_LINEAR));
         OpenGL::render_end();
 
-        if (!progression.running() && (progression - 1 <= 0.01))
+        if (!fixed && !progression.running() && (progression - 1 <= 0.01))
         {
             unset_hook();
         }
     };
 
-    wf::post_hook_t frender_hook = [=] (const wf::framebuffer_base_t& source,
-                                       const wf::framebuffer_base_t& destination)
-    {
-        auto w = destination.viewport_width;
-        auto h = destination.viewport_height;
-        auto oc = output->get_cursor_position();
-        double x, y;
-        wlr_box b = output->get_relative_geometry();
-        wlr_box_closest_point(&b, oc.x, oc.y, &x, &y);
-
-        /* get rotation & scale */
-        wlr_box box = {int(x), int(y), 1, 1};
-        box = output->render->get_target_framebuffer().
-            framebuffer_box_from_geometry_box(box);
-
-        x = box.x;
-        y = h - box.y;
-
-        const float scale = (fixed_zoom - 1) / fixed_zoom;
-
-        // The target width and height are truncated here so that `x1+tw` and
-        // `x1` round to GLint in tandem for glBlitFramebuffer(). This keeps the
-        // aspect ratio constant while panning around.
-        const GLint tw = w / fixed_zoom, th = h / fixed_zoom;
-
-        const float x1 = x * scale;
-        const float y1 = y * scale;
-        // The target width and height are truncated here so that `x1+tw` and
-        // `x1` round to GLint in tandem for glBlitFramebuffer(). This keeps the
-        // aspect ratio constant while panning around.
-
-        OpenGL::render_begin(source);
-        GL_CALL(glBindFramebuffer(GL_READ_FRAMEBUFFER, source.fb));
-        GL_CALL(glBindFramebuffer(GL_DRAW_FRAMEBUFFER, destination.fb));
-        GL_CALL(glBlitFramebuffer(x1, y1, x1 + tw, y1 + th, 0, 0, w, h,
-            GL_COLOR_BUFFER_BIT, GL_LINEAR));
-        OpenGL::render_end();
-    };
-
     bool toggle_zoom(void)
     {
-        if (!hook_set)
+        if (!fixed)
         {
-            hook_set = true;
-            output->render->add_post(&frender_hook);
-            output->render->set_redraw_always();
+            if (hook_set)
+            {
+                progression.set(1, 1);
+                unset_hook();
+            }
+            else
+            {
+                fixed = true;
+                output->render->add_post(&render_hook);
+                output->render->set_redraw_always();
+            }
         }
         else
         {
+            fixed = false;
             hook_set = false;
-            output->render->rem_post(&frender_hook);
+            output->render->rem_post(&render_hook);
         }
         return true;
     }
