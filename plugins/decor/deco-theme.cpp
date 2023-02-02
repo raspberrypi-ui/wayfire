@@ -15,7 +15,9 @@ decoration_theme_t::decoration_theme_t()
 /** @return The available height for displaying the title */
 int decoration_theme_t::get_title_height() const
 {
-    return title_height;
+    PangoFontDescription *font_desc = pango_font_description_from_string (((std::string) font).c_str());
+    int height = pango_font_description_get_size (font_desc) / PANGO_SCALE;
+    return height * 2 + 5;
 }
 
 /** @return The available border for resizing */
@@ -59,20 +61,19 @@ cairo_surface_t*decoration_theme_t::render_text(std::string text,
 
     auto cr = cairo_create(surface);
 
-    const float font_scale = 0.8;
-    const float font_size  = height * font_scale;
-
     PangoFontDescription *font_desc;
     PangoLayout *layout;
+    int w, h;
 
     // render text
     font_desc = pango_font_description_from_string(((std::string)font).c_str());
-    pango_font_description_set_absolute_size(font_desc, font_size * PANGO_SCALE);
 
     layout = pango_cairo_create_layout(cr);
     pango_layout_set_font_description(layout, font_desc);
     pango_layout_set_text(layout, text.c_str(), text.size());
     cairo_set_source_rgba(cr, 1, 1, 1, 1);
+    pango_layout_get_pixel_size (layout, &w, &h);
+    cairo_translate (cr, (width - w) / 2, (height - h) / 2);  // not quite right - need to account for buttons
     pango_cairo_show_layout(cr, layout);
     pango_font_description_free(font_desc);
     g_object_unref(layout);
