@@ -1,4 +1,5 @@
 #pragma once
+#include <gio/gio.h>
 #include <wayfire/render-manager.hpp>
 #include "deco-button.hpp"
 
@@ -62,10 +63,11 @@ class decoration_theme_t
         const button_state_t& state) const;
 
   private:
-    wf::option_wrapper_t<std::string> font{"decoration/font"};
     wf::option_wrapper_t<int> border_size{"decoration/border_size"};
     wf::option_wrapper_t<wf::color_t> active_color{"decoration/active_color"};
     wf::option_wrapper_t<wf::color_t> inactive_color{"decoration/inactive_color"};
+
+    GSettings *gs;
 };
 }
 }

@@ -10,14 +10,19 @@ namespace decor
 {
 /** Create a new theme with the default parameters */
 decoration_theme_t::decoration_theme_t()
-{}
+{
+	gs = g_settings_new ("org.gnome.desktop.interface");
+}
 
 /** @return The available height for displaying the title */
 int decoration_theme_t::get_title_height() const
 {
-    PangoFontDescription *font_desc = pango_font_description_from_string (((std::string) font).c_str());
-    int height = pango_font_description_get_size (font_desc) / PANGO_SCALE;
-    return height * 2 + 5;
+    char *font = g_settings_get_string (gs, "font-name");
+
+    PangoFontDescription *font_desc = pango_font_description_from_string (font);
+    int height = (pango_font_description_get_size (font_desc) / PANGO_SCALE) * 2 + 5;
+    g_free (font);
+    return height;
 }
 
 /** @return The available border for resizing */
@@ -63,10 +68,11 @@ cairo_surface_t*decoration_theme_t::render_text(std::string text,
 
     PangoFontDescription *font_desc;
     PangoLayout *layout;
+    char *font = g_settings_get_string (gs, "font-name");
     int w, h;
 
     // render text
-    font_desc = pango_font_description_from_string(((std::string)font).c_str());
+    font_desc = pango_font_description_from_string (font);
 
     layout = pango_cairo_create_layout(cr);
     pango_layout_set_font_description(layout, font_desc);
@@ -78,6 +84,7 @@ cairo_surface_t*decoration_theme_t::render_text(std::string text,
     pango_font_description_free(font_desc);
     g_object_unref(layout);
     cairo_destroy(cr);
+    g_free (font);
 
     return surface;
 }
