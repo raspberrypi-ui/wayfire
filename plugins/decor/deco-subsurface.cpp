@@ -40,16 +40,11 @@ class simple_decoration_surface : public wf::surface_interface_t,
         int target_width  = width * scale;
         int target_height = height * scale;
 
-        if ((title_texture.tex.width != target_width) ||
-            (title_texture.tex.height != target_height) ||
-            (title_texture.current_text != view->get_title()))
-        {
-            auto surface = theme.render_text(view->get_title(),
-                target_width, target_height);
-            cairo_surface_upload_to_texture(surface, title_texture.tex);
-            cairo_surface_destroy(surface);
-            title_texture.current_text = view->get_title();
-        }
+        auto surface = theme.render_text(view->get_title(),
+            target_width, target_height, active);
+        cairo_surface_upload_to_texture(surface, title_texture.tex);
+        cairo_surface_destroy(surface);
+        title_texture.current_text = view->get_title();
     }
 
     int width = 100, height = 100;

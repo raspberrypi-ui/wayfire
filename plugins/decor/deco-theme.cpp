@@ -4,6 +4,37 @@
 #include <config.h>
 #include <map>
 
+
+#define THEME_FILE "/usr/share/themes/PiXflat/gtk-3.0/gtk-contained.css"
+
+gboolean read_colour (char *file, char *name, float *r, float *g, float *b)
+{
+    char *cmd = g_strdup_printf ("sed -n -e \"s/@define-color[ \t]*%s[ \t]*//p\" %s", name, file);
+    char *line = NULL;
+    size_t len = 0;
+    int n = 0, ir, ig, ib;
+    FILE *fp = popen (cmd, "r");
+
+    if (fp)
+    {
+        if (getline (&line, &len, fp) > 0)
+        {
+            n = sscanf (line, "#%02x%02x%02x", &ir, &ig, &ib);
+            g_free (line);
+        }
+        pclose (fp);
+    }
+    g_free (cmd);
+    if (n == 3)
+    {
+        *r = ir / 255.0;
+        *g = ig / 255.0;
+        *b = ib / 255.0;
+        return TRUE;
+    }
+    return FALSE;
+}
+
 namespace wf
 {
 namespace decor
@@ -11,7 +42,33 @@ namespace decor
 /** Create a new theme with the default parameters */
 decoration_theme_t::decoration_theme_t()
 {
-	gs = g_settings_new ("org.gnome.desktop.interface");
+    float r, g, b;
+    gs = g_settings_new ("org.gnome.desktop.interface");
+
+    // read the current colour scheme
+    char *userconf = g_build_filename (g_get_user_data_dir (), "themes/PiXflat/gtk-3.0/gtk.css", NULL);
+
+    if (read_colour (userconf, "theme_selected_bg_color", &r, &g, &b)
+        || read_colour (THEME_FILE, "theme_selected_bg_color", &r, &g, &b))
+            fg = {r, g, b, 1.0};
+    else fg = {0.13, 0.13, 0.13, 0.67};
+
+    if (read_colour (userconf, "theme_selected_fg_color", &r, &g, &b)
+        || read_colour (THEME_FILE, "theme_selected_fg_color", &r, &g, &b))
+            fg_text = {r, g, b, 1.0};
+    else fg_text = {1.0, 1.0, 1.0, 1.0};
+
+    if (read_colour (userconf, "theme_unfocused_bg_color", &r, &g, &b)
+        || read_colour (THEME_FILE, "theme_unfocused_bg_color", &r, &g, &b))
+            bg = {r, g, b, 1.0};
+    else bg = {0.2, 0.2, 0.2, 0.87};
+
+    if (read_colour (userconf, "theme_unfocused_fg_color", &r, &g, &b)
+        || read_colour (THEME_FILE, "theme_unfocused_fg_color", &r, &g, &b))
+            bg_text = {r, g, b, 1.0};
+    else bg_text = {1.0, 1.0, 1.0, 1.0};
+
+    g_free (userconf);
 }
 
 /** @return The available height for displaying the title */
@@ -42,7 +99,7 @@ int decoration_theme_t::get_border_size() const
 void decoration_theme_t::render_background(const wf::framebuffer_t& fb,
     wf::geometry_t rectangle, const wf::geometry_t& scissor, bool active) const
 {
-    wf::color_t color = active ? active_color : inactive_color;
+    wf::color_t color = active ? fg : bg;
     OpenGL::render_begin(fb);
     fb.logic_scissor(scissor);
     OpenGL::render_rectangle(rectangle, color, fb.get_orthographic_projection());
@@ -54,7 +111,7 @@ void decoration_theme_t::render_background(const wf::framebuffer_t& fb,
  * The caller is responsible for freeing the memory afterwards.
  */
 cairo_surface_t*decoration_theme_t::render_text(std::string text,
-    int width, int height) const
+    int width, int height, bool active) const
 {
     const auto format = CAIRO_FORMAT_ARGB32;
     auto surface = cairo_image_surface_create(format, width, height);
@@ -77,7 +134,7 @@ cairo_surface_t*decoration_theme_t::render_text(std::string text,
     layout = pango_cairo_create_layout(cr);
     pango_layout_set_font_description(layout, font_desc);
     pango_layout_set_text(layout, text.c_str(), text.size());
-    cairo_set_source_rgba(cr, 1, 1, 1, 1);
+    cairo_set_source_rgba(cr, active ? fg_text.r : bg_text.r, active ? fg_text.g : bg_text.g, active ? fg_text.b : bg_text.b, 1);
     pango_layout_get_pixel_size (layout, &w, &h);
     cairo_translate (cr, (width - w) / 2, (height - h) / 2);  // not quite right - need to account for buttons
     pango_cairo_show_layout(cr, layout);
