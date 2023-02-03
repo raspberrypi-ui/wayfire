@@ -102,6 +102,8 @@ void decoration_theme_t::render_background(const wf::framebuffer_t& fb,
     wf::color_t color = active ? fg : bg;
     OpenGL::render_begin(fb);
     fb.logic_scissor(scissor);
+    OpenGL::render_rectangle(rectangle, bg, fb.get_orthographic_projection());
+    rectangle.height = get_title_height () + get_border_size ();
     OpenGL::render_rectangle(rectangle, color, fb.get_orthographic_projection());
     OpenGL::render_end();
 }
