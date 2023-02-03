@@ -35,13 +35,13 @@ class simple_decoration_surface : public wf::surface_interface_t,
         }
     };
 
-    void update_title(int width, int height, double scale)
+    void update_title(int width, int height, int t_width, double scale)
     {
         int target_width  = width * scale;
         int target_height = height * scale;
 
         auto surface = theme.render_text(view->get_title(),
-            target_width, target_height, active);
+            target_width, target_height, t_width, active);
         cairo_surface_upload_to_texture(surface, title_texture.tex);
         cairo_surface_destroy(surface);
         title_texture.current_text = view->get_title();
@@ -96,9 +96,9 @@ class simple_decoration_surface : public wf::surface_interface_t,
     }
 
     void render_title(const wf::framebuffer_t& fb,
-        wf::geometry_t geometry)
+        wf::geometry_t geometry, int t_width)
     {
-        update_title(geometry.width, geometry.height, fb.scale);
+        update_title(geometry.width, geometry.height, t_width, fb.scale);
         OpenGL::render_texture(title_texture.tex.tex, fb, geometry,
             glm::vec4(1.0f), OpenGL::TEXTURE_TRANSFORM_INVERT_Y);
     }
@@ -118,7 +118,7 @@ class simple_decoration_surface : public wf::surface_interface_t,
             {
                 OpenGL::render_begin(fb);
                 fb.logic_scissor(scissor);
-                render_title(fb, item->get_geometry() + origin);
+                render_title(fb, item->get_geometry() + origin, width);
                 OpenGL::render_end();
             } else // button
             {

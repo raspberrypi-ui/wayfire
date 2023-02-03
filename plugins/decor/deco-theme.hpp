@@ -37,7 +37,7 @@ class decoration_theme_t
      * Render the given text on a cairo_surface_t with the given size.
      * The caller is responsible for freeing the memory afterwards.
      */
-    cairo_surface_t *render_text(std::string text, int width, int height, bool active) const;
+    cairo_surface_t *render_text(std::string text, int width, int height, int t_width, bool active) const;
 
     struct button_state_t
     {
