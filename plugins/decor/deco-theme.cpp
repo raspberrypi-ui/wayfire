@@ -7,9 +7,9 @@
 
 #define THEME_FILE "/usr/share/themes/PiXflat/gtk-3.0/gtk-contained.css"
 
-gboolean read_colour (char *file, char *name, float *r, float *g, float *b)
+gboolean read_colour (char *file, const char *name, float *r, float *g, float *b)
 {
-    char *cmd = g_strdup_printf ("sed -n -e \"s/@define-color[ \t]*%s[ \t]*//p\" %s", name, file);
+    char *cmd = g_strdup_printf ("sed -n -e \"s/@define-color[ \t]*%s[ \t]*//p\" %s", name, file ? file : THEME_FILE);
     char *line = NULL;
     size_t len = 0;
     int n = 0, ir, ig, ib;
@@ -49,22 +49,22 @@ decoration_theme_t::decoration_theme_t()
     char *userconf = g_build_filename (g_get_user_data_dir (), "themes/PiXflat/gtk-3.0/gtk.css", NULL);
 
     if (read_colour (userconf, "theme_selected_bg_color", &r, &g, &b)
-        || read_colour (THEME_FILE, "theme_selected_bg_color", &r, &g, &b))
+        || read_colour (NULL, "theme_selected_bg_color", &r, &g, &b))
             fg = {r, g, b, 1.0};
     else fg = {0.13, 0.13, 0.13, 0.67};
 
     if (read_colour (userconf, "theme_selected_fg_color", &r, &g, &b)
-        || read_colour (THEME_FILE, "theme_selected_fg_color", &r, &g, &b))
+        || read_colour (NULL, "theme_selected_fg_color", &r, &g, &b))
             fg_text = {r, g, b, 1.0};
     else fg_text = {1.0, 1.0, 1.0, 1.0};
 
     if (read_colour (userconf, "theme_unfocused_bg_color", &r, &g, &b)
-        || read_colour (THEME_FILE, "theme_unfocused_bg_color", &r, &g, &b))
+        || read_colour (NULL, "theme_unfocused_bg_color", &r, &g, &b))
             bg = {r, g, b, 1.0};
     else bg = {0.2, 0.2, 0.2, 0.87};
 
     if (read_colour (userconf, "theme_unfocused_fg_color", &r, &g, &b)
-        || read_colour (THEME_FILE, "theme_unfocused_fg_color", &r, &g, &b))
+        || read_colour (NULL, "theme_unfocused_fg_color", &r, &g, &b))
             bg_text = {r, g, b, 1.0};
     else bg_text = {1.0, 1.0, 1.0, 1.0};
 
