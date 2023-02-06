@@ -157,21 +157,31 @@ cairo_surface_t*decoration_theme_t::get_button_surface(button_type_t button,
     const button_state_t& state) const
 {
     cairo_surface_t *cs;
+    const char *icon_name;
+    char *iconfile;
+    char *font = g_settings_get_string (gs, "font-name");
+
+    PangoFontDescription *font_desc = pango_font_description_from_string (font);
+    int height = pango_font_description_get_size (font_desc) / PANGO_SCALE;
+    g_free (font);
+
     switch (button)
     {
-        case BUTTON_CLOSE:
-            cs = cairo_image_surface_create_from_png ("/usr/share/icons/PiXflat/24x24/actions/window-close-symbolic.symbolic.png");
-            break;
-        case BUTTON_TOGGLE_MAXIMIZE:
-            if (maximized)
-                cs = cairo_image_surface_create_from_png ("/usr/share/icons/PiXflat/24x24/actions/window-restore-symbolic.symbolic.png");
-            else
-                cs = cairo_image_surface_create_from_png ("/usr/share/icons/PiXflat/24x24/actions/window-maximize-symbolic.symbolic.png");
-            break;
-        case BUTTON_MINIMIZE:
-            cs = cairo_image_surface_create_from_png ("/usr/share/icons/PiXflat/24x24/actions/window-minimize-symbolic.symbolic.png");
-            break;
+        case BUTTON_CLOSE :             icon_name = "close";
+                                        break;
+        case BUTTON_TOGGLE_MAXIMIZE :   if (maximized) icon_name = "restore";
+                                        else icon_name = "maximize";
+                                        break;
+        case BUTTON_MINIMIZE :          icon_name = "minimize";
+                                        break;
     }
+
+    iconfile = g_strdup_printf ("/usr/share/icons/PiXflat/%s/actions/window-%s%s-symbolic.symbolic.png",
+        height >= 24 ? "24x24" : "16x16", icon_name, fabs (state.hover_progress) > 1e-3 ? "-hover" : "");
+
+    cs = cairo_image_surface_create_from_png (iconfile);
+
+    g_free (iconfile);
     return cs;
 
     cairo_surface_t *button_surface = cairo_image_surface_create(
