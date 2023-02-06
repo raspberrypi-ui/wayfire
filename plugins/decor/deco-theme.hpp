@@ -62,6 +62,8 @@ class decoration_theme_t
     cairo_surface_t *get_button_surface(button_type_t button,
         const button_state_t& state) const;
 
+    void set_maximize (bool state);
+
   private:
     wf::option_wrapper_t<int> border_size{"decoration/border_size"};
 
@@ -70,6 +72,7 @@ class decoration_theme_t
 	wf::color_t bg;
 	wf::color_t fg_text;
 	wf::color_t bg_text;
+	bool maximized;
 };
 }
 }

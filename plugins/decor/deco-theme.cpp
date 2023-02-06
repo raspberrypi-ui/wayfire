@@ -88,6 +88,11 @@ int decoration_theme_t::get_border_size() const
     return border_size;
 }
 
+void decoration_theme_t::set_maximize (bool state)
+{
+    maximized = state;
+}
+
 /**
  * Fill the given rectangle with the background color(s).
  *
@@ -151,6 +156,24 @@ cairo_surface_t*decoration_theme_t::render_text(std::string text,
 cairo_surface_t*decoration_theme_t::get_button_surface(button_type_t button,
     const button_state_t& state) const
 {
+    cairo_surface_t *cs;
+    switch (button)
+    {
+        case BUTTON_CLOSE:
+            cs = cairo_image_surface_create_from_png ("/usr/share/icons/PiXflat/24x24/actions/window-close-symbolic.symbolic.png");
+            break;
+        case BUTTON_TOGGLE_MAXIMIZE:
+            if (maximized)
+                cs = cairo_image_surface_create_from_png ("/usr/share/icons/PiXflat/24x24/actions/window-restore-symbolic.symbolic.png");
+            else
+                cs = cairo_image_surface_create_from_png ("/usr/share/icons/PiXflat/24x24/actions/window-maximize-symbolic.symbolic.png");
+            break;
+        case BUTTON_MINIMIZE:
+            cs = cairo_image_surface_create_from_png ("/usr/share/icons/PiXflat/24x24/actions/window-minimize-symbolic.symbolic.png");
+            break;
+    }
+    return cs;
+
     cairo_surface_t *button_surface = cairo_image_surface_create(
         CAIRO_FORMAT_ARGB32, state.width, state.height);
 

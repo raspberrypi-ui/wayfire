@@ -271,6 +271,7 @@ class simple_decoration_surface : public wf::surface_interface_t,
 
     virtual void notify_view_resized(wf::geometry_t view_geometry) override
     {
+        theme.set_maximize (view->tiled_edges);
         view->damage();
         width  = view_geometry.width;
         height = view_geometry.height;
