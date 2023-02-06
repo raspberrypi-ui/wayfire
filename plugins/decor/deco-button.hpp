@@ -68,7 +68,7 @@ class button_t : public noncopyable_t
      * @param scissor The scissor rectangle to render.
      */
     void render(const wf::framebuffer_t& buffer, wf::geometry_t geometry,
-        wf::geometry_t scissor);
+        wf::geometry_t scissor, bool active);
 
   private:
     const decoration_theme_t& theme;
@@ -76,6 +76,7 @@ class button_t : public noncopyable_t
     /* Whether the button needs repaint */
     button_type_t type;
     wf::simple_texture_t button_texture;
+    bool active;
 
     /* Whether the button is currently being hovered */
     bool is_hovered = false;

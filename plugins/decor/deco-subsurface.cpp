@@ -123,7 +123,7 @@ class simple_decoration_surface : public wf::surface_interface_t,
             } else // button
             {
                 item->as_button().render(fb,
-                    item->get_geometry() + origin, scissor);
+                    item->get_geometry() + origin, scissor, active);
             }
         }
     }

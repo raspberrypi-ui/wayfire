@@ -60,7 +60,7 @@ class decoration_theme_t
      * @param state The button state.
      */
     cairo_surface_t *get_button_surface(button_type_t button,
-        const button_state_t& state) const;
+        const button_state_t& state, bool active) const;
 
     void set_maximize (bool state);
 

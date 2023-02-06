@@ -64,8 +64,14 @@ void button_t::set_pressed(bool is_pressed)
 }
 
 void button_t::render(const wf::framebuffer_t& fb, wf::geometry_t geometry,
-    wf::geometry_t scissor)
+    wf::geometry_t scissor, bool active)
 {
+    if (this->active != active)
+    {
+        this->active = active;
+        update_texture ();
+        add_idle_damage ();
+    }
     OpenGL::render_begin(fb);
     fb.logic_scissor(scissor);
     OpenGL::render_texture(button_texture.tex, fb, geometry, {1, 1, 1, 1},
@@ -93,7 +99,7 @@ void button_t::update_texture()
         .hover_progress = hover,
     };
 
-    auto surface = theme.get_button_surface(type, state);
+    auto surface = theme.get_button_surface(type, state, this->active);
     OpenGL::render_begin();
     cairo_surface_upload_to_texture(surface, this->button_texture);
     OpenGL::render_end();
