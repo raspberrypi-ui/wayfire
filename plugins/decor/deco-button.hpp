@@ -35,7 +35,7 @@ class button_t : public noncopyable_t
      * @param damage_callback   A callback to execute when the button needs a
      * repaint. Damage won't be reported while render() is being called.
      */
-    button_t(const decoration_theme_t& theme,
+    button_t(const decoration_theme_t& theme, wf::geometry_t geom,
         std::function<void()> damage_callback);
 
     /**
@@ -77,6 +77,7 @@ class button_t : public noncopyable_t
     button_type_t type;
     wf::simple_texture_t button_texture;
     bool active;
+    wf::geometry_t geometry;
 
     /* Whether the button is currently being hovered */
     bool is_hovered = false;

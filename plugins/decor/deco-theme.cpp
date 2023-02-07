@@ -199,8 +199,8 @@ cairo_surface_t*decoration_theme_t::get_button_surface(button_type_t button,
     sw = cairo_image_surface_get_width (cspng);
 
     // create a larger surface
-    tw = 20;    // set these properly !!!!!!
-    th = 20;
+    tw = state.width;
+    th = state.height;
     csout = cairo_image_surface_create (CAIRO_FORMAT_ARGB32, tw, th);
     tdata = cairo_image_surface_get_data (csout);
 

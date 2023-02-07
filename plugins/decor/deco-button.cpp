@@ -11,8 +11,8 @@ namespace wf
 {
 namespace decor
 {
-button_t::button_t(const decoration_theme_t& t, std::function<void()> damage) :
-    theme(t), damage_callback(damage)
+button_t::button_t(const decoration_theme_t& t, wf::geometry_t geom, std::function<void()> damage) :
+    theme(t), damage_callback(damage), geometry(geom)
 {}
 
 void button_t::set_button_type(button_type_t type)
@@ -93,8 +93,8 @@ void button_t::update_texture()
      * a very crisp image
      */
     decoration_theme_t::button_state_t state = {
-        .width  = 1.0 * theme.get_title_height(),
-        .height = 1.0 * theme.get_title_height(),
+        .width  = 1.0 * this->geometry.width,
+        .height = 1.0 * this->geometry.width,
         .border = 1.0,
         .hover_progress = hover,
     };

@@ -32,7 +32,7 @@ decoration_area_t::decoration_area_t(wf::geometry_t g,
     this->type     = DECORATION_AREA_BUTTON;
     this->geometry = g;
 
-    this->button = std::make_unique<button_t>(theme,
+    this->button = std::make_unique<button_t>(theme, g,
         std::bind(damage_callback, g));
 }
 
