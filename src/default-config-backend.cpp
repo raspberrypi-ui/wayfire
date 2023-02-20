@@ -1,6 +1,7 @@
 #include <vector>
 #include "wayfire/debug.hpp"
 #include <string>
+#include <cstring>
 #include <wayfire/config/file.hpp>
 #include <wayfire/config-backend.hpp>
 #include <wayfire/plugin.hpp>
@@ -100,10 +101,15 @@ class dynamic_ini_config_t : public wf::config_backend_t
         LOGI("Using config file: ", config_file.c_str());
         setenv(CONFIG_FILE_ENV, config_file.c_str(), 1);
 
+        /* use a custom config file when running the wizard */
+        bool wiz = false;
+        char *user = getenv ("USER");
+        if (user && !strcmp (user, "rpi-first-boot-wizard")) wiz = true;
+
         /* check if the config file exists - if not, copy the defaults to it */
-        if (access (config_file.c_str(), F_OK) && !access (SYSCONFDIR "/wayfire/defaults.ini", F_OK))
+        if (access (config_file.c_str(), F_OK) && !access (wiz ? SYSCONFDIR "/wayfire/wizard.ini" : SYSCONFDIR "/wayfire/defaults.ini", F_OK))
         {
-            int fs = open (SYSCONFDIR "/wayfire/defaults.ini", O_RDONLY);
+            int fs = open (wiz ? SYSCONFDIR "/wayfire/wizard.ini" : SYSCONFDIR "/wayfire/defaults.ini", O_RDONLY);
             if (fs >= 0)
             {
                 struct stat stat_buf;
@@ -119,7 +125,7 @@ class dynamic_ini_config_t : public wf::config_backend_t
         }
 
         config = wf::config::build_configuration(
-            get_xml_dirs(), SYSCONFDIR "/wayfire/defaults.ini", config_file);
+            get_xml_dirs(), wiz ? SYSCONFDIR "/wayfire/wizard.ini" : SYSCONFDIR "/wayfire/defaults.ini", config_file);
 
         int inotify_fd = inotify_init1(IN_CLOEXEC);
         reload_config(inotify_fd);
