@@ -4,8 +4,10 @@
 #include <config.h>
 #include <map>
 
-
-#define THEME_FILE "/usr/share/themes/PiXflat/gtk-3.0/gtk-contained.css"
+#define THEME_PATH "/usr/share/themes/PiXflat/gtk-3.0/"
+#define THEME_FILE THEME_PATH "gtk-contained.css"
+#define LARGE_ICON_THRESHOLD 20
+#define MIN_BAR_HEIGHT 24
 
 gboolean read_colour (char *file, const char *name, float *r, float *g, float *b)
 {
@@ -72,14 +74,29 @@ decoration_theme_t::decoration_theme_t()
 }
 
 /** @return The available height for displaying the title */
-int decoration_theme_t::get_title_height() const
+int decoration_theme_t::get_font_height() const
 {
     char *font = g_settings_get_string (gs, "font-name");
 
     PangoFontDescription *font_desc = pango_font_description_from_string (font);
-    int height = (pango_font_description_get_size (font_desc) / PANGO_SCALE) * 2 + 5;
+    int font_height = pango_font_description_get_size (font_desc);
     g_free (font);
-    return height;
+    if (!pango_font_description_get_size_is_absolute (font_desc))
+    {
+        font_height *= 4;
+        font_height /= 3;
+    }
+    return font_height / PANGO_SCALE;
+}
+
+int decoration_theme_t::get_title_height() const
+{
+    int height = get_font_height ();
+    height *= 3;
+    height /= 2;
+    height += 5;
+    if (height < MIN_BAR_HEIGHT) return MIN_BAR_HEIGHT;
+    else return height;
 }
 
 /** @return The available border for resizing */
@@ -160,14 +177,8 @@ cairo_surface_t*decoration_theme_t::get_button_surface(button_type_t button,
     unsigned char *sdata, *tdata;
     const char *icon_name;
     char *iconfile;
-    char *font = g_settings_get_string (gs, "font-name");
     int sh, sw, th, tw, pad, r, g, b;
     float fr, fg, fb;
-
-    // get the icon height
-    PangoFontDescription *font_desc = pango_font_description_from_string (font);
-    int height = pango_font_description_get_size (font_desc) / PANGO_SCALE;
-    g_free (font);
 
     // get the current text colour
     fr = (active ? fg_text.r : bg_text.r) * 255.0;
@@ -189,8 +200,8 @@ cairo_surface_t*decoration_theme_t::get_button_surface(button_type_t button,
         case BUTTON_MINIMIZE :          icon_name = "minimize";
                                         break;
     }
-    iconfile = g_strdup_printf ("/usr/share/icons/PiXflat/%s/actions/window-%s%s-symbolic.symbolic.png",
-        height >= 24 ? "24x24" : "16x16", icon_name, fabs (state.hover_progress) > 1e-3 ? "-hover" : "");
+    iconfile = g_strdup_printf (THEME_PATH "assets/window-%s%s%s.symbolic.png",
+         icon_name, fabs (state.hover_progress) > 1e-3 ? "-hover" : "", get_font_height () >= LARGE_ICON_THRESHOLD ? "-large" : "");
 
     // read the icon into a surface
     cspng = cairo_image_surface_create_from_png (iconfile);
