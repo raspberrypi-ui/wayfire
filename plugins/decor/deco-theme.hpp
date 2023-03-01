@@ -18,7 +18,7 @@ class decoration_theme_t
     decoration_theme_t();
 
     /** @return The height of the system font in pixels */
-    int get_font_height() const;
+    int get_font_height_px() const;
     /** @return The available height for displaying the title */
     int get_title_height() const;
     /** @return The available border for resizing */

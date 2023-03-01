@@ -74,7 +74,7 @@ decoration_theme_t::decoration_theme_t()
 }
 
 /** @return The available height for displaying the title */
-int decoration_theme_t::get_font_height() const
+int decoration_theme_t::get_font_height_px() const
 {
     char *font = g_settings_get_string (gs, "font-name");
 
@@ -91,7 +91,7 @@ int decoration_theme_t::get_font_height() const
 
 int decoration_theme_t::get_title_height() const
 {
-    int height = get_font_height ();
+    int height = get_font_height_px ();
     height *= 3;
     height /= 2;
     height += 5;
@@ -201,7 +201,7 @@ cairo_surface_t*decoration_theme_t::get_button_surface(button_type_t button,
                                         break;
     }
     iconfile = g_strdup_printf (THEME_PATH "assets/window-%s%s%s.symbolic.png",
-         icon_name, fabs (state.hover_progress) > 1e-3 ? "-hover" : "", get_font_height () >= LARGE_ICON_THRESHOLD ? "-large" : "");
+         icon_name, fabs (state.hover_progress) > 1e-3 ? "-hover" : "", get_font_height_px () >= LARGE_ICON_THRESHOLD ? "-large" : "");
 
     // read the icon into a surface
     cspng = cairo_image_surface_create_from_png (iconfile);
