@@ -6,8 +6,6 @@
 
 #define THEME_PATH "/usr/share/themes/PiXflat/gtk-3.0/"
 #define THEME_FILE THEME_PATH "gtk-contained.css"
-#define LARGE_ICON_THRESHOLD 20
-#define MIN_BAR_HEIGHT 24
 
 gboolean read_colour (char *file, const char *name, float *r, float *g, float *b)
 {

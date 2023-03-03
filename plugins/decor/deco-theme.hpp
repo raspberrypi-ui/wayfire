@@ -3,6 +3,10 @@
 #include <wayfire/render-manager.hpp>
 #include "deco-button.hpp"
 
+#define LARGE_ICON_THRESHOLD 20
+#define MIN_BAR_HEIGHT 20
+#define BUTTON_W_PAD 2
+
 namespace wf
 {
 namespace decor

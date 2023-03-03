@@ -63,8 +63,8 @@ decoration_layout_t::decoration_layout_t(const decoration_theme_t& th,
      * overly huge button. 70% of the titlebar height
      * is a decent size. (Equals 21 px by default)
      */
-    button_width(titlebar_size * BUTTON_HEIGHT_PC),
-    button_height(titlebar_size * BUTTON_HEIGHT_PC),
+    button_width(th.get_font_height_px () >= LARGE_ICON_THRESHOLD ? 26 : 18),
+    button_height(th.get_font_height_px () >= LARGE_ICON_THRESHOLD ? 26 : 18),
     button_padding((titlebar_size - button_height) / 2),
     theme(th),
     damage_callback(callback)
@@ -93,10 +93,10 @@ wf::geometry_t decoration_layout_t::create_buttons(int width, int)
         }
     }
 
-    int per_button = 2 * button_padding + button_width;
+    int per_button = 2 * BUTTON_W_PAD + button_width;
     wf::geometry_t button_geometry = {
-        width - border_size + button_padding, /* 1 more padding initially */
-        button_padding + border_size,
+        width - border_size + BUTTON_W_PAD, /* 1 more padding initially */
+        button_padding + border_size - 1,
         button_width,
         button_height,
     };
@@ -109,7 +109,7 @@ wf::geometry_t decoration_layout_t::create_buttons(int width, int)
         this->layout_areas.back()->as_button().set_button_type(type);
     }
 
-    int total_width = -button_padding + buttons.size() * per_button;
+    int total_width = -BUTTON_W_PAD + buttons.size() * per_button;
 
     return {
         button_geometry.x, border_size,
