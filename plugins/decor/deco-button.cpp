@@ -11,8 +11,8 @@ namespace wf
 {
 namespace decor
 {
-button_t::button_t(const decoration_theme_t& t, wf::geometry_t geom, std::function<void()> damage) :
-    theme(t), damage_callback(damage), geometry(geom)
+button_t::button_t(const decoration_theme_t& t, std::function<void()> damage) :
+    theme(t), damage_callback(damage)
 {}
 
 void button_t::set_button_type(button_type_t type)
@@ -64,14 +64,8 @@ void button_t::set_pressed(bool is_pressed)
 }
 
 void button_t::render(const wf::framebuffer_t& fb, wf::geometry_t geometry,
-    wf::geometry_t scissor, bool active)
+    wf::geometry_t scissor)
 {
-    if (this->active != active)
-    {
-        this->active = active;
-        update_texture ();
-        add_idle_damage ();
-    }
     OpenGL::render_begin(fb);
     fb.logic_scissor(scissor);
     OpenGL::render_texture(button_texture.tex, fb, geometry, {1, 1, 1, 1},
@@ -93,13 +87,13 @@ void button_t::update_texture()
      * a very crisp image
      */
     decoration_theme_t::button_state_t state = {
-        .width  = 1.0 * this->geometry.width,
-        .height = 1.0 * this->geometry.width,
+        .width  = 1.0 * theme.get_title_height(),
+        .height = 1.0 * theme.get_title_height(),
         .border = 1.0,
         .hover_progress = hover,
     };
 
-    auto surface = theme.get_button_surface(type, state, this->active);
+    auto surface = theme.get_button_surface(type, state);
     OpenGL::render_begin();
     cairo_surface_upload_to_texture(surface, this->button_texture);
     OpenGL::render_end();

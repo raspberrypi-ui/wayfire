@@ -35,7 +35,7 @@ class button_t : public noncopyable_t
      * @param damage_callback   A callback to execute when the button needs a
      * repaint. Damage won't be reported while render() is being called.
      */
-    button_t(const decoration_theme_t& theme, wf::geometry_t geom,
+    button_t(const decoration_theme_t& theme,
         std::function<void()> damage_callback);
 
     /**
@@ -68,7 +68,7 @@ class button_t : public noncopyable_t
      * @param scissor The scissor rectangle to render.
      */
     void render(const wf::framebuffer_t& buffer, wf::geometry_t geometry,
-        wf::geometry_t scissor, bool active);
+        wf::geometry_t scissor);
 
   private:
     const decoration_theme_t& theme;
@@ -76,8 +76,6 @@ class button_t : public noncopyable_t
     /* Whether the button needs repaint */
     button_type_t type;
     wf::simple_texture_t button_texture;
-    bool active;
-    wf::geometry_t geometry;
 
     /* Whether the button is currently being hovered */
     bool is_hovered = false;

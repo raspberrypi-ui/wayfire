@@ -35,16 +35,21 @@ class simple_decoration_surface : public wf::surface_interface_t,
         }
     };
 
-    void update_title(int width, int height, int t_width, double scale)
+    void update_title(int width, int height, double scale)
     {
         int target_width  = width * scale;
         int target_height = height * scale;
 
-        auto surface = theme.render_text(view->get_title(),
-            target_width, target_height, t_width, active);
-        cairo_surface_upload_to_texture(surface, title_texture.tex);
-        cairo_surface_destroy(surface);
-        title_texture.current_text = view->get_title();
+        if ((title_texture.tex.width != target_width) ||
+            (title_texture.tex.height != target_height) ||
+            (title_texture.current_text != view->get_title()))
+        {
+            auto surface = theme.render_text(view->get_title(),
+                target_width, target_height);
+            cairo_surface_upload_to_texture(surface, title_texture.tex);
+            cairo_surface_destroy(surface);
+            title_texture.current_text = view->get_title();
+        }
     }
 
     int width = 100, height = 100;
@@ -96,9 +101,9 @@ class simple_decoration_surface : public wf::surface_interface_t,
     }
 
     void render_title(const wf::framebuffer_t& fb,
-        wf::geometry_t geometry, int t_width)
+        wf::geometry_t geometry)
     {
-        update_title(geometry.width, geometry.height, t_width, fb.scale);
+        update_title(geometry.width, geometry.height, fb.scale);
         OpenGL::render_texture(title_texture.tex.tex, fb, geometry,
             glm::vec4(1.0f), OpenGL::TEXTURE_TRANSFORM_INVERT_Y);
     }
@@ -118,12 +123,12 @@ class simple_decoration_surface : public wf::surface_interface_t,
             {
                 OpenGL::render_begin(fb);
                 fb.logic_scissor(scissor);
-                render_title(fb, item->get_geometry() + origin, width);
+                render_title(fb, item->get_geometry() + origin);
                 OpenGL::render_end();
             } else // button
             {
                 item->as_button().render(fb,
-                    item->get_geometry() + origin, scissor, active);
+                    item->get_geometry() + origin, scissor);
             }
         }
     }
@@ -271,7 +276,6 @@ class simple_decoration_surface : public wf::surface_interface_t,
 
     virtual void notify_view_resized(wf::geometry_t view_geometry) override
     {
-        theme.set_maximize (view->tiled_edges);
         view->damage();
         width  = view_geometry.width;
         height = view_geometry.height;

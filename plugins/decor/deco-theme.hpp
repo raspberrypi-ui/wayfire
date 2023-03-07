@@ -1,11 +1,6 @@
 #pragma once
-#include <gio/gio.h>
 #include <wayfire/render-manager.hpp>
 #include "deco-button.hpp"
-
-#define LARGE_ICON_THRESHOLD 20
-#define MIN_BAR_HEIGHT 20
-#define BUTTON_W_PAD 2
 
 namespace wf
 {
@@ -21,8 +16,6 @@ class decoration_theme_t
     /** Create a new theme with the default parameters */
     decoration_theme_t();
 
-    /** @return The height of the system font in pixels */
-    int get_font_height_px() const;
     /** @return The available height for displaying the title */
     int get_title_height() const;
     /** @return The available border for resizing */
@@ -43,7 +36,7 @@ class decoration_theme_t
      * Render the given text on a cairo_surface_t with the given size.
      * The caller is responsible for freeing the memory afterwards.
      */
-    cairo_surface_t *render_text(std::string text, int width, int height, int t_width, bool active) const;
+    cairo_surface_t *render_text(std::string text, int width, int height) const;
 
     struct button_state_t
     {
@@ -66,19 +59,14 @@ class decoration_theme_t
      * @param state The button state.
      */
     cairo_surface_t *get_button_surface(button_type_t button,
-        const button_state_t& state, bool active) const;
-
-    void set_maximize (bool state);
+        const button_state_t& state) const;
 
   private:
+    wf::option_wrapper_t<std::string> font{"decoration/font"};
+    wf::option_wrapper_t<int> title_height{"decoration/title_height"};
     wf::option_wrapper_t<int> border_size{"decoration/border_size"};
-
-    GSettings *gs;
-	wf::color_t fg;
-	wf::color_t bg;
-	wf::color_t fg_text;
-	wf::color_t bg_text;
-	bool maximized;
+    wf::option_wrapper_t<wf::color_t> active_color{"decoration/active_color"};
+    wf::option_wrapper_t<wf::color_t> inactive_color{"decoration/inactive_color"};
 };
 }
 }
