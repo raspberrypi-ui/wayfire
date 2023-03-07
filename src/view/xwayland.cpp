@@ -1101,7 +1101,7 @@ void wf::init_xwayland()
     });
 
     xwayland_handle = wlr_xwayland_create(wf::get_core().display,
-        wf::get_core_impl().compositor, false);
+        wf::get_core_impl().compositor, true);
 
     if (xwayland_handle)
     {
