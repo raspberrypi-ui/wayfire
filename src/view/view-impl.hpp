@@ -136,6 +136,7 @@ class wlr_view_t :
     virtual void set_decoration_mode(bool use_csd);
     virtual void set_output(wf::output_t*) override;
     bool has_client_decoration = true;
+    bool has_gtk_decoration = true;
 
   protected:
     std::string title, app_id;

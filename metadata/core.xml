@@ -70,5 +70,10 @@
 			<_long>Whether to pass buttons through to the client when switching the focus via clicking</_long>
 			<default>true</default>
 		</option>
+		<option name="only_decorate_gtk" type="bool">
+			<_short>Only decorate GTK apps</_short>
+			<_long>When enabled, only requests client-side decoration for GTK applications.</_long>
+			<default>false</default>
+		</option>
 	</plugin>
 </wayfire>

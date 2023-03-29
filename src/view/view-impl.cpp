@@ -255,13 +255,15 @@ wlr_surface*wf::wlr_view_t::get_keyboard_focus_surface()
 
 bool wf::wlr_view_t::should_be_decorated()
 {
-    return role == wf::VIEW_ROLE_TOPLEVEL && !has_client_decoration;
+    return role == wf::VIEW_ROLE_TOPLEVEL && (!has_client_decoration || !has_gtk_decoration);
 }
 
 void wf::wlr_view_t::set_decoration_mode(bool use_csd)
 {
     bool was_decorated = should_be_decorated();
     this->has_client_decoration = use_csd;
+    wf::option_wrapper_t<bool> only_gtk ("core/only_decorate_gtk");
+    if (only_gtk == 1) this->has_gtk_decoration = false;
     if ((was_decorated != should_be_decorated()) && is_mapped())
     {
         wf::view_decoration_state_updated_signal data;
