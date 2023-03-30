@@ -335,6 +335,10 @@ void wf::output_impl_t::focus_view(wayfire_view v, uint32_t flags)
         return;
     }
 
+    // release the current active view - it will be updated later
+    // this fixes the active titlebar on the current window while the desktop has focus
+    update_active_view(nullptr, flags);
+
     while (all_dialogs_modal && v->parent && v->parent->is_mapped())
     {
         v = v->parent;
