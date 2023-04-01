@@ -335,9 +335,12 @@ void wf::output_impl_t::focus_view(wayfire_view v, uint32_t flags)
         return;
     }
 
-    // release the current active view - it will be updated later
+    // release the current active view if the new view is the desktop
     // this fixes the active titlebar on the current window while the desktop has focus
-    if (v->role == VIEW_ROLE_DESKTOP_ENVIRONMENT) update_active_view (nullptr, flags);
+    if (v->role == VIEW_ROLE_DESKTOP_ENVIRONMENT && v->get_app_id () == "gtk-layer-shell")
+    {
+        update_active_view (nullptr, flags);
+    }
 
     while (all_dialogs_modal && v->parent && v->parent->is_mapped())
     {
