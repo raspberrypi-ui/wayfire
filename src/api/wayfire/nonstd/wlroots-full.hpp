@@ -126,6 +126,7 @@ extern "C"
 #include <wlr/types/wlr_virtual_pointer_v1.h>
 #include <wlr/types/wlr_idle_inhibit_v1.h>
 #include <wlr/types/wlr_input_inhibitor.h>
+#include <wlr/types/wlr_xdg_activation_v1.h>
 #define delete delete_
 #include <wlr/types/wlr_input_method_v2.h>
 #undef delete
