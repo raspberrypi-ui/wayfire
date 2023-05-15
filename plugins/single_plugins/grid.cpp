@@ -291,6 +291,7 @@ class wayfire_grid : public wf::plugin_interface_t
     wf::activator_callback bindings[10];
     wf::option_wrapper_t<wf::activatorbinding_t> keys[10];
     wf::option_wrapper_t<wf::activatorbinding_t> restore_opt{"grid/restore"};
+    wf::option_wrapper_t<bool> mouse_snap{"grid/mouse_snap"};
 
     wf::activator_callback restore = [=] (auto)
     {
@@ -342,8 +343,11 @@ class wayfire_grid : public wf::plugin_interface_t
         output->add_activator(restore_opt, &restore);
 
         output->connect_signal("workarea-changed", &on_workarea_changed);
-        output->connect_signal("view-snap", &on_snap_signal);
-        output->connect_signal("query-snap-geometry", &on_snap_query);
+        if (mouse_snap)
+        {
+            output->connect_signal("view-snap", &on_snap_signal);
+            output->connect_signal("query-snap-geometry", &on_snap_query);
+        }
         output->connect_signal("view-tile-request", &on_maximize_signal);
         output->connect_signal("view-fullscreen-request", &on_fullscreen_signal);
     }

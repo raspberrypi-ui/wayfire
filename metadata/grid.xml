@@ -77,5 +77,10 @@
 			<_long>Restores the window to its original size and position with the specified activator.</_long>
 			<default>&lt;super&gt; KEY_DOWN | &lt;super&gt; KEY_KP0</default>
 		</option>
+		<option name="mouse_snap" type="bool">
+			<_short>Snap when mouse moved to edges</_short>
+			<_long>Snap windows in response to being dragged to edges of screen. If false, keyboard activators can still trigger snaps.</_long>
+			<default>true</default>
+		</option>
 	</plugin>
 </wayfire>
