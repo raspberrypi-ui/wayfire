@@ -436,12 +436,12 @@ struct output_layout_output_t
             }
         }
 
-        return *fallback;
 
         /* Couldn't find a preferred mode. Just return the last, which is
          * usually also the "largest" */
         wl_list_for_each_reverse(mode, &handle->modes, link)
 
+        return *fallback;
         return *mode;
 
         /* Finally, if there isn't any mode (for ex. wayland backend),
