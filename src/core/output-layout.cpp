@@ -874,6 +874,9 @@ class output_layout_t::impl
      * virtual output with the noop backend. */
     std::unique_ptr<output_layout_output_t> noop_output;
 
+    wf::option_wrapper_t<int> headless_width{"output/headless_width"};
+    wf::option_wrapper_t<int> headless_height{"output/headless_height"};
+
     signal_callback_t on_config_reload;
     signal_connection_t on_backend_started = [=] (wf::signal_data_t*)
     {
@@ -1006,7 +1009,7 @@ class output_layout_t::impl
 
         if (!noop_output)
         {
-            auto handle = wlr_headless_add_output(noop_backend, 1280, 720);
+            auto handle = wlr_headless_add_output(noop_backend, headless_width, headless_height);
             handle->data = WF_NOOP_OUTPUT_MAGIC;
             strcpy(handle->name, "NOOP-1");
 

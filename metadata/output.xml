@@ -14,5 +14,15 @@
     <option name="transform" type="string">
       <default>normal</default>
     </option>
+    <option name="headless_width" type="int">
+      <_short>Headless Width</_short>
+      <_long>Sets the default width of the screen when used headless.</_long>
+      <default>1280</default>
+    </option>
+    <option name="headless_height" type="int">
+      <_short>Headless Height</_short>
+      <_long>Sets the default height of the screen when used headless.</_long>
+      <default>720</default>
+    </option>
   </object>
 </wayfire>
