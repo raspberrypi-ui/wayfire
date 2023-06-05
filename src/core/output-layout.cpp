@@ -418,14 +418,25 @@ struct output_layout_output_t
 
     wlr_output_mode select_default_mode()
     {
-        wlr_output_mode *mode;
+        wlr_output_mode *mode, *fallback;
+        int w = 0, h = 0, r = 0;
         wl_list_for_each(mode, &handle->modes, link)
         {
             if (mode->preferred)
             {
                 return *mode;
             }
+
+            if (mode->width > w && mode->height > h && mode->refresh > r)
+            {
+                w = mode->width;
+                h = mode->height;
+                r = mode->refresh;
+                fallback = mode;
+            }
         }
+
+        return *fallback;
 
         /* Couldn't find a preferred mode. Just return the last, which is
          * usually also the "largest" */
