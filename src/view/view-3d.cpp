@@ -1,9 +1,13 @@
+#include <wayfire/util/log.hpp>
+#include <wayfire/nonstd/wlroots-full.hpp>
 #include "wayfire/view-transform.hpp"
 #include "wayfire/opengl.hpp"
+#include "wayfire/pixman.hpp"
 #include "wayfire/core.hpp"
 #include "wayfire/output.hpp"
 #include <algorithm>
 #include <cmath>
+#include "../main.hpp"
 
 #include <glm/gtc/matrix_transform.hpp>
 
@@ -168,11 +172,33 @@ void wf::view_2D::render_box(wf::texture_t src_tex, wlr_box src_box,
 
     auto transform = fb.transform * ortho * translate * rotate;
 
-    OpenGL::render_begin(fb);
-    fb.logic_scissor(scissor_box);
-    OpenGL::render_transformed_texture(src_tex, quad.geometry, {},
-        transform, {1.0f, 1.0f, 1.0f, alpha});
-    OpenGL::render_end();
+    if (!runtime_config.use_pixman)
+     {
+        OpenGL::render_begin(fb);
+        fb.logic_scissor(scissor_box);
+        OpenGL::render_transformed_texture(src_tex, quad.geometry, {},
+                                           transform, {1.0f, 1.0f, 1.0f, alpha});
+        OpenGL::render_end();
+     }
+   else
+     {
+        wlr_log(WLR_DEBUG, "Pixman View2D render_box render_transformed_texture");
+        Pixman::render_begin(fb);
+        fb.logic_scissor(scissor_box);
+        auto surf = view->get_keyboard_focus_surface();
+        if (surf)
+          {
+             auto texture = wlr_surface_get_texture(surf);
+             if (texture)
+               {
+                  Pixman::render_transformed_texture(texture, quad.geometry, {},
+                                                     transform,
+                                                     {1.0f, 1.0f, 1.0f, alpha});
+               }
+          }
+
+        Pixman::render_end();
+     }
 }
 
 const float wf::view_3D::fov = PI / 4;
@@ -281,9 +307,30 @@ void wf::view_3D::render_box(wf::texture_t src_tex, wlr_box src_box,
 
     transform = fb.transform * scale * translate * transform;
 
-    OpenGL::render_begin(fb);
-    fb.logic_scissor(scissor_box);
-    OpenGL::render_transformed_texture(src_tex, quad.geometry, {},
-        transform, color);
-    OpenGL::render_end();
+    if (!runtime_config.use_pixman)
+     {
+        OpenGL::render_begin(fb);
+        fb.logic_scissor(scissor_box);
+        OpenGL::render_transformed_texture(src_tex, quad.geometry, {},
+                                           transform, color);
+        OpenGL::render_end();
+     }
+   else
+     {
+        wlr_log(WLR_DEBUG, "Pixman View3D render_box render_transformed_texture");
+        Pixman::render_begin(fb);
+        fb.logic_scissor(scissor_box);
+        auto surf = view->get_keyboard_focus_surface();
+        if (surf)
+          {
+             auto texture = wlr_surface_get_texture(surf);
+             if (texture)
+               {
+                  Pixman::render_transformed_texture(texture, quad.geometry, {},
+                                                     transform, color);
+               }
+          }
+
+        Pixman::render_end();
+     }
 }

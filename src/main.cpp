@@ -36,6 +36,7 @@ static void print_help()
         std::endl;
     std::cout << " -h,  --help              print this help" << std::endl;
     std::cout << " -d,  --debug             enable debug logging" << std::endl;
+    std::cout << " -p,  --pixman            enable pixman rendering" << std::endl;
     std::cout <<
         " -D,  --damage-debug      enable additional debug for damaged regions" <<
         std::endl;
@@ -186,6 +187,7 @@ int main(int argc, char *argv[])
         {"debug", no_argument, NULL, 'd'},
         {"damage-debug", no_argument, NULL, 'D'},
         {"damage-rerender", no_argument, NULL, 'R'},
+        {"pixman", no_argument, NULL, 'p'},
         {"help", no_argument, NULL, 'h'},
         {"version", no_argument, NULL, 'v'},
         {0, 0, NULL, 0}
@@ -195,7 +197,7 @@ int main(int argc, char *argv[])
     std::string config_backend = WF_DEFAULT_CONFIG_BACKEND;
 
     int c, i;
-    while ((c = getopt_long(argc, argv, "c:B:dDhRv", opts, &i)) != -1)
+    while ((c = getopt_long(argc, argv, "c:B:dDhRpv", opts, &i)) != -1)
     {
         switch (c)
         {
@@ -221,6 +223,11 @@ int main(int argc, char *argv[])
 
           case 'd':
             log_level = wf::log::LOG_LEVEL_DEBUG;
+            break;
+
+          case 'p':
+            runtime_config.use_pixman = true;
+            setenv("WAYFIRE_USE_PIXMAN", "true", 1);
             break;
 
           case 'v':
@@ -271,11 +278,21 @@ int main(int argc, char *argv[])
         return EXIT_FAILURE;
     }
 
-    core.renderer  = wlr_gles2_renderer_create_with_drm_fd(drm_fd);
+    if (!runtime_config.use_pixman)
+     {
+        core.renderer  = wlr_gles2_renderer_create_with_drm_fd(drm_fd);
+        core.egl = wlr_gles2_renderer_get_egl(core.renderer);
+        assert(core.egl);
+     }
+   else
+     {
+        /* setenv("WLR_RENDERER", "pixman", 1); */
+        /* core.renderer = wlr_renderer_autocreate(core.backend); */
+        core.renderer = wlr_pixman_renderer_create();
+     }
+
     core.allocator = wlr_allocator_autocreate(core.backend, core.renderer);
     assert(core.allocator);
-    core.egl = wlr_gles2_renderer_get_egl(core.renderer);
-    assert(core.egl);
 
     if (!drop_permissions())
     {

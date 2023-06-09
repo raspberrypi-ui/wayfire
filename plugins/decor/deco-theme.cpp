@@ -1,8 +1,10 @@
 #include "deco-theme.hpp"
 #include <wayfire/core.hpp>
 #include <wayfire/opengl.hpp>
+#include <wayfire/pixman.hpp>
 #include <config.h>
 #include <map>
+#include "../main.hpp"
 
 namespace wf
 {
@@ -36,10 +38,20 @@ void decoration_theme_t::render_background(const wf::framebuffer_t& fb,
     wf::geometry_t rectangle, const wf::geometry_t& scissor, bool active) const
 {
     wf::color_t color = active ? active_color : inactive_color;
-    OpenGL::render_begin(fb);
-    fb.logic_scissor(scissor);
-    OpenGL::render_rectangle(rectangle, color, fb.get_orthographic_projection());
-    OpenGL::render_end();
+    if (!runtime_config.use_pixman)
+     {
+        OpenGL::render_begin(fb);
+        fb.logic_scissor(scissor);
+        OpenGL::render_rectangle(rectangle, color, fb.get_orthographic_projection());
+        OpenGL::render_end();
+     }
+   else
+     {
+        Pixman::render_begin(fb);
+        fb.logic_scissor(scissor);
+        Pixman::render_rectangle(rectangle, color, fb.get_orthographic_projection());
+        Pixman::render_end();
+     }
 }
 
 /**

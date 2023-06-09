@@ -4,6 +4,7 @@
 #include <wayfire/plugins/common/simple-texture.hpp>
 #include <wayfire/config/types.hpp>
 #include <cairo.h>
+#include <stdlib.h>
 
 namespace wf
 {
@@ -193,9 +194,18 @@ struct cairo_text_t
         cairo_show_text(cr, text.c_str());
 
         cairo_surface_flush(surface);
-        OpenGL::render_begin();
-        cairo_surface_upload_to_texture(surface, tex);
-        OpenGL::render_end();
+
+       /* NB: We have to use the getenv version of this test as various
+        * plugins include this file and trying to include ../main.hpp
+        * causes compile errors for those plugins */
+       if (!getenv("WAYFIRE_USE_PIXMAN"))
+         {
+            OpenGL::render_begin();
+            /* NB: We cannot do this with pixman as 
+             * cairo_surface_upload_to_texture uses glTexture functions */
+            cairo_surface_upload_to_texture(surface, tex);
+            OpenGL::render_end();
+         }
 
         return ret;
     }

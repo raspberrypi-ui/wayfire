@@ -1,9 +1,11 @@
 #include "scale-title-overlay.hpp"
 
 #include <wayfire/opengl.hpp>
+#include <wayfire/pixman.hpp>
 #include <wayfire/util/log.hpp>
 #include <wayfire/plugins/common/cairo-util.hpp>
 #include <wayfire/plugins/common/simple-texture.hpp>
+#include "../main.hpp"
 
 /**
  * Get the topmost parent of a view.
@@ -353,24 +355,41 @@ class view_title_overlay_t : public wf::scale_transformer_t::overlay_t
         view_title_texture_t& title = get_overlay_texture(find_toplevel_parent(
             tr.get_transformed_view()));
 
-        GLuint tex = title.overlay.tex.tex;
+        if (!runtime_config.use_pixman)
+         {
+            GLuint tex = title.overlay.tex.tex;
 
-        if (tex == (GLuint) - 1)
-        {
-            /* this should not happen */
-            return;
-        }
+            if (tex == (GLuint) - 1)
+              {
+                 /* this should not happen */
+                 return;
+              }
 
-        auto ortho = fb.get_orthographic_projection();
-        OpenGL::render_begin(fb);
-        for (const auto& box : damage)
-        {
-            fb.logic_scissor(wlr_box_from_pixman_box(box));
-            OpenGL::render_transformed_texture(tex, geometry, ortho,
-                {1.0f, 1.0f, 1.0f, tr.alpha}, OpenGL::TEXTURE_TRANSFORM_INVERT_Y);
-        }
+            auto ortho = fb.get_orthographic_projection();
+            OpenGL::render_begin(fb);
+            for (const auto& box : damage)
+              {
+                 fb.logic_scissor(wlr_box_from_pixman_box(box));
+                 OpenGL::render_transformed_texture(tex, geometry, ortho,
+                                                    {1.0f, 1.0f, 1.0f, tr.alpha}, OpenGL::TEXTURE_TRANSFORM_INVERT_Y);
+              }
 
-        OpenGL::render_end();
+            OpenGL::render_end();
+         }
+       else
+         {
+            Pixman::render_begin(fb);
+            for (const auto& box : damage)
+              {
+                 fb.logic_scissor(wlr_box_from_pixman_box(box));
+                 /* NB: We have no Pixman::render_texture function that
+                  * can handle wf::simple_texture_t */
+                 /* Pixman::render_texture(title.overlay.tex, fb, geometry, */
+                 /*                        {1.0f, 1.0f, 1.0f, tr.alpha}); */
+              }
+
+            Pixman::render_end();
+         }
     }
 
   public:

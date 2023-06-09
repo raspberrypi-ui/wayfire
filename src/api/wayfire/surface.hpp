@@ -108,6 +108,9 @@ class surface_interface_t : public wf::object_base_t
      */
     virtual void set_output(wf::output_t *output);
 
+    virtual void create_output_layer(wf::output_t *output);
+    virtual void destroy_output_layer();
+
     /** @return The offset of this surface relative to its parent surface.  */
     virtual wf::point_t get_offset() = 0;
 

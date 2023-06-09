@@ -1,5 +1,6 @@
 #include <wayfire/plugin.hpp>
 #include <wayfire/opengl.hpp>
+#include <wayfire/pixman.hpp>
 #include <wayfire/view-transform.hpp>
 #include <wayfire/core.hpp>
 
@@ -17,6 +18,8 @@
 #include <algorithm>
 #include <exception>
 #include <set>
+
+#include "../main.hpp"
 
 constexpr const char *switcher_transformer = "switcher-3d";
 constexpr const char *switcher_transformer_background = "switcher-3d";
@@ -581,9 +584,18 @@ class WayfireSwitcher : public wf::plugin_interface_t
 
     wf::render_hook_t switcher_renderer = [=] (const wf::framebuffer_t& fb)
     {
-        OpenGL::render_begin(fb);
-        OpenGL::clear({0, 0, 0, 1});
-        OpenGL::render_end();
+        if (!runtime_config.use_pixman)
+         {
+            OpenGL::render_begin(fb);
+            OpenGL::clear({0, 0, 0, 1});
+            OpenGL::render_end();
+         }
+       else
+         {
+            Pixman::render_begin(fb);
+            Pixman::clear({0, 0, 0, 1});
+            Pixman::render_end();
+         }
 
         dim_background(background_dim);
         for (auto view : get_background_views())

@@ -2,6 +2,8 @@
 #include "../core/core-impl.hpp"
 #include "view-impl.hpp"
 #include "wayfire/opengl.hpp"
+#include "wayfire/pixman.hpp"
+#include "wayfire/texture.hpp"
 #include "wayfire/output.hpp"
 #include "wayfire/view.hpp"
 #include "wayfire/view-transform.hpp"
@@ -10,6 +12,7 @@
 #include "wayfire/render-manager.hpp"
 #include "xdg-shell.hpp"
 #include "../output/gtk-shell.hpp"
+#include "../main.hpp"
 
 #include <algorithm>
 #include <glm/glm.hpp>
@@ -1131,13 +1134,26 @@ bool wf::view_interface_t::render_transformed(const wf::framebuffer_t& framebuff
         int scaled_height = transformed_box.height * texture_scale;
 
         /* Prepare buffer to store result after the transform */
-        OpenGL::render_begin();
+        if (!runtime_config.use_pixman)
+           OpenGL::render_begin();
+        /* else */
+        /*    Pixman::render_begin(); */
+
         transform->fb.allocate(scaled_width, scaled_height);
         transform->fb.scale    = texture_scale;
         transform->fb.geometry = transformed_box;
         transform->fb.bind(); // bind buffer to clear it
-        OpenGL::clear({0, 0, 0, 0});
-        OpenGL::render_end();
+
+        if (!runtime_config.use_pixman)
+         {
+            OpenGL::clear({0, 0, 0, 0});
+            OpenGL::render_end();
+         }
+       else
+         {
+            Pixman::clear({0, 0, 0, 0});
+            Pixman::render_end();
+         }
 
         /* Actually render the transform to the next framebuffer */
         transform->transform->render_with_damage(previous_texture, obox,
@@ -1157,22 +1173,51 @@ bool wf::view_interface_t::render_transformed(const wf::framebuffer_t& framebuff
      * framebuffer. */
     if (final_transform == nullptr)
     {
-        OpenGL::render_begin(framebuffer);
-        auto matrix = framebuffer.get_orthographic_projection();
-        gl_geometry src_geometry = {
-            1.0f * obox.x, 1.0f * obox.y,
-            1.0f * obox.x + 1.0f * obox.width,
-            1.0f * obox.y + 1.0f * obox.height,
-        };
+       if (!runtime_config.use_pixman)
+         {
+            OpenGL::render_begin(framebuffer);
+            auto matrix = framebuffer.get_orthographic_projection();
+            gl_geometry src_geometry = {
+               1.0f * obox.x, 1.0f * obox.y,
+               1.0f * obox.x + 1.0f * obox.width,
+               1.0f * obox.y + 1.0f * obox.height,
+            };
 
-        for (const auto& rect : damage)
-        {
-            framebuffer.logic_scissor(wlr_box_from_pixman_box(rect));
-            OpenGL::render_transformed_texture(previous_texture, src_geometry,
-                {}, matrix);
-        }
+            for (const auto& rect : damage)
+              {
+                 framebuffer.logic_scissor(wlr_box_from_pixman_box(rect));
+                 OpenGL::render_transformed_texture(previous_texture, src_geometry,
+                                                    {}, matrix);
+              }
 
-        OpenGL::render_end();
+            OpenGL::render_end();
+         }
+       else
+         {
+            /* XXX: FIXME: Implement for Pixman */
+            wlr_log(WLR_DEBUG, "Pixman view_interface render_transformed");
+
+            Pixman::render_begin(framebuffer);
+            auto matrix = framebuffer.get_orthographic_projection();
+            gl_geometry src_geometry = {
+               1.0f * obox.x, 1.0f * obox.y,
+               1.0f * obox.x + 1.0f * obox.width,
+               1.0f * obox.y + 1.0f * obox.height,
+            };
+
+            for (const auto& rect : damage)
+              {
+                 framebuffer.logic_scissor(wlr_box_from_pixman_box(rect));
+                 auto surf = get_wlr_surface();
+                 if (!surf) continue;
+                 auto texture = wlr_surface_get_texture(surf);
+                 if (!texture) continue;
+                 Pixman::render_transformed_texture(texture, src_geometry,
+                                                    {}, matrix);
+              }
+
+            Pixman::render_end();
+         }
     } else
     {
         /* Regular case, just call the last transformer, but render directly
@@ -1188,9 +1233,11 @@ wf::view_transform_block_t::view_transform_block_t()
 {}
 wf::view_transform_block_t::~view_transform_block_t()
 {
-    OpenGL::render_begin();
+    if (!runtime_config.use_pixman)
+     OpenGL::render_begin();
     this->fb.release();
-    OpenGL::render_end();
+    if (!runtime_config.use_pixman)
+     OpenGL::render_end();
 }
 
 void wf::view_interface_t::take_snapshot()
@@ -1222,17 +1269,28 @@ void wf::view_interface_t::take_snapshot()
         offscreen_buffer.cached_damage |= buffer_geometry;
     }
 
-    OpenGL::render_begin();
+   /* XXX: FIXME: Implement for Pixman */
+    if (!runtime_config.use_pixman) 
+      OpenGL::render_begin();
+    /* else */
+    /*  Pixman::render_begin(); */
+
     offscreen_buffer.allocate(scaled_width, scaled_height);
     offscreen_buffer.scale = scale;
     offscreen_buffer.bind();
     for (auto& box : offscreen_buffer.cached_damage)
     {
         offscreen_buffer.logic_scissor(wlr_box_from_pixman_box(box));
-        OpenGL::clear({0, 0, 0, 0});
+       if (!runtime_config.use_pixman)
+         OpenGL::clear({0, 0, 0, 0});
+       else
+         Pixman::clear({0, 0, 0, 0});
     }
 
-    OpenGL::render_end();
+    if (!runtime_config.use_pixman)
+      OpenGL::render_end();
+    else
+      Pixman::render_end();
 
     auto output_geometry = get_output_geometry();
     auto children = enumerate_surfaces({output_geometry.x, output_geometry.y});
@@ -1290,9 +1348,11 @@ void wf::view_interface_t::deinitialize()
     this->view_impl->transforms.clear();
     this->_clear_data();
 
-    OpenGL::render_begin();
+    if (!runtime_config.use_pixman)
+      OpenGL::render_begin();
     this->view_impl->offscreen_buffer.release();
-    OpenGL::render_end();
+    if (!runtime_config.use_pixman)
+      OpenGL::render_end();
 }
 
 wf::view_interface_t::~view_interface_t()

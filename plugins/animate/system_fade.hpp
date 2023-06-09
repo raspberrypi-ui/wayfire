@@ -4,8 +4,10 @@
 #include <wayfire/core.hpp>
 #include <wayfire/output.hpp>
 #include <wayfire/opengl.hpp>
+#include <wayfire/pixman.hpp>
 #include <wayfire/render-manager.hpp>
 #include "animate.hpp"
+#include "../main.hpp"
 
 /* animates wake from suspend/startup by fading in the whole output */
 class wf_system_fade
@@ -38,10 +40,20 @@ class wf_system_fade
         auto fb = output->render->get_target_framebuffer();
         auto geometry = output->get_relative_geometry();
 
-        OpenGL::render_begin(fb);
-        OpenGL::render_rectangle(geometry, color,
-            fb.get_orthographic_projection());
-        OpenGL::render_end();
+        if (!runtime_config.use_pixman)
+         {
+            OpenGL::render_begin(fb);
+            OpenGL::render_rectangle(geometry, color,
+                                     fb.get_orthographic_projection());
+            OpenGL::render_end();
+         }
+       else
+         {
+            Pixman::render_begin(fb);
+            Pixman::render_rectangle(geometry, color,
+                                     fb.get_orthographic_projection());
+            Pixman::render_end();
+         }
 
         if (!progression.running())
         {

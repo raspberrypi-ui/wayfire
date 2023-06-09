@@ -8,6 +8,7 @@
 #include "wayfire/workspace-manager.hpp"
 #include "../core/seat/seat.hpp"
 #include "../core/opengl-priv.hpp"
+#include "../core/pixman-priv.hpp"
 #include "../main.hpp"
 #include <algorithm>
 #include <wayfire/nonstd/reverse.hpp>
@@ -283,6 +284,7 @@ struct postprocessing_manager_t
     {
         /* Sometimes, the framebuffer by OpenGL is Y-inverted.
          * This is the case only if the target framebuffer is not 0 */
+       /* FIXME */
         if (output_fb == 0)
         {
             return;
@@ -295,9 +297,14 @@ struct postprocessing_manager_t
     }
 
     uint32_t output_fb = 0;
+    struct wlr_buffer *output_buffer = NULL;
     void set_output_framebuffer(uint32_t output_fb)
     {
         this->output_fb = output_fb;
+    }
+    void set_output_framebuffer(struct wlr_buffer *fb)
+    {
+        this->output_buffer = fb;
     }
 
     void allocate(int width, int height)
@@ -310,9 +317,11 @@ struct postprocessing_manager_t
         output_width  = width;
         output_height = height;
 
-        OpenGL::render_begin();
+        if (!runtime_config.use_pixman)
+            OpenGL::render_begin();
         post_buffers[default_out_buffer].allocate(width, height);
-        OpenGL::render_end();
+        if (!runtime_config.use_pixman)
+            OpenGL::render_end();
     }
 
     void add_post(post_hook_t *hook)
@@ -336,6 +345,7 @@ struct postprocessing_manager_t
     void run_post_effects()
     {
         wf::framebuffer_base_t default_framebuffer;
+        default_framebuffer.buffer = output_buffer;
         default_framebuffer.fb  = output_fb;
         default_framebuffer.tex = 0;
 
@@ -350,10 +360,12 @@ struct postprocessing_manager_t
                 (post == post_effects.back() ? default_framebuffer :
                     post_buffers[next_buffer_idx]);
 
-            OpenGL::render_begin();
+            if (!runtime_config.use_pixman)
+               OpenGL::render_begin();
             /* Make sure we have the correct resolution */
             next_buffer.allocate(output_width, output_height);
-            OpenGL::render_end();
+            if (!runtime_config.use_pixman)
+               OpenGL::render_end();
 
             (*post)(post_buffers[last_buffer_idx], next_buffer);
 
@@ -375,10 +387,12 @@ struct postprocessing_manager_t
         {
             fb.fb  = post_buffers[default_out_buffer].fb;
             fb.tex = post_buffers[default_out_buffer].tex;
+            fb.buffer = post_buffers[default_out_buffer].buffer;
         } else
         {
             fb.fb  = output_fb;
             fb.tex = 0;
+            fb.buffer = output_buffer;
         }
 
         workaround_wlroots_backend_y_invert(fb);
@@ -414,14 +428,27 @@ class depth_buffer_manager_t : public noncopyable_t
         attach_buffer(find_buffer(fb), fb, width, height);
     }
 
+    void ensure_depth_buffer(struct wlr_buffer *fb, int width, int height)
+    {
+        /* If the backend doesn't have its own framebuffer, then the
+         * framebuffer is created with a depth buffer. */
+        if (!fb)
+        {
+            return;
+        }
+
+        attach_buffer(find_buffer(fb), fb, width, height);
+    }
+
     ~depth_buffer_manager_t()
     {
+        if (runtime_config.use_pixman) return;
+        /* XXX: TODO: Implement Texture Delete for Pixman */
         OpenGL::render_begin();
         for (auto& buffer : buffers)
         {
             GL_CALL(glDeleteTextures(1, &buffer.tex));
         }
-
         OpenGL::render_end();
     }
 
@@ -430,11 +457,11 @@ class depth_buffer_manager_t : public noncopyable_t
 
     struct depth_buffer_t
     {
-        GLuint tex = -1;
+        uint32_t tex = -1; //        GLuint tex = -1;
         int attached_to = -1;
         int width  = 0;
         int height = 0;
-
+        struct wlr_buffer *attached_fb = NULL;
         int64_t last_used = 0;
     };
 
@@ -447,25 +474,73 @@ class depth_buffer_manager_t : public noncopyable_t
             return;
         }
 
-        if (buffer.tex != (GLuint) - 1)
-        {
-            GL_CALL(glDeleteTextures(1, &buffer.tex));
-        }
+        if (!runtime_config.use_pixman)
+         {
+            if (buffer.tex != (GLuint) - 1)
+              {
+                 GL_CALL(glDeleteTextures(1, &buffer.tex));
+              }
 
-        GL_CALL(glGenTextures(1, &buffer.tex));
-        GL_CALL(glBindTexture(GL_TEXTURE_2D, buffer.tex));
-        GL_CALL(glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT,
-            width, height, 0, GL_DEPTH_COMPONENT, GL_UNSIGNED_INT, NULL));
+            GL_CALL(glGenTextures(1, &buffer.tex));
+            GL_CALL(glBindTexture(GL_TEXTURE_2D, buffer.tex));
+            GL_CALL(glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT,
+                                 width, height, 0, GL_DEPTH_COMPONENT, GL_UNSIGNED_INT, NULL));
+
+            GL_CALL(glBindTexture(GL_TEXTURE_2D, buffer.tex));
+            GL_CALL(glBindFramebuffer(GL_FRAMEBUFFER, fb));
+            GL_CALL(glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT,
+                                           GL_TEXTURE_2D, buffer.tex, 0));
+            GL_CALL(glBindTexture(GL_TEXTURE_2D, 0));
+         }
+       /* else */
+       /*   { */
+            /* XXX: TODO: Implement Attach Buffer for Pixman */
+            /* wlr_log(WLR_DEBUG, "Pixman depth_buffer_manager attach buffer"); */
+         /* } */
+
         buffer.width  = width;
         buffer.height = height;
-
-        GL_CALL(glBindTexture(GL_TEXTURE_2D, buffer.tex));
-        GL_CALL(glBindFramebuffer(GL_FRAMEBUFFER, fb));
-        GL_CALL(glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT,
-            GL_TEXTURE_2D, buffer.tex, 0));
-        GL_CALL(glBindTexture(GL_TEXTURE_2D, 0));
-
         buffer.attached_to = fb;
+        buffer.last_used   = get_current_time();
+    }
+
+    void attach_buffer(depth_buffer_t& buffer, struct wlr_buffer *fb, int width, int height)
+    {
+        if ((buffer.attached_fb == fb) &&
+            (buffer.width == width) &&
+            (buffer.height == height))
+        {
+            return;
+        }
+
+        /* if (!runtime_config.use_pixman) */
+        /*  { */
+        /*     if (buffer.tex != (GLuint) - 1) */
+        /*       { */
+        /*          GL_CALL(glDeleteTextures(1, &buffer.tex)); */
+        /*       } */
+
+        /*     GL_CALL(glGenTextures(1, &buffer.tex)); */
+        /*     GL_CALL(glBindTexture(GL_TEXTURE_2D, buffer.tex)); */
+        /*     GL_CALL(glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT, */
+        /*                          width, height, 0, GL_DEPTH_COMPONENT, GL_UNSIGNED_INT, NULL)); */
+
+        /*     GL_CALL(glBindTexture(GL_TEXTURE_2D, buffer.tex)); */
+        /*     GL_CALL(glBindFramebuffer(GL_FRAMEBUFFER, fb)); */
+        /*     GL_CALL(glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, */
+        /*                                    GL_TEXTURE_2D, buffer.tex, 0)); */
+        /*     GL_CALL(glBindTexture(GL_TEXTURE_2D, 0)); */
+        /*  } */
+       /* else */
+       if (runtime_config.use_pixman)
+         {
+            /* XXX: TODO: Implement Attach Buffer for Pixman */
+            wlr_log(WLR_DEBUG, "Pixman depth_buffer_manager attach buffer %p", fb);
+         }
+
+        buffer.width  = width;
+        buffer.height = height;
+        buffer.attached_fb = fb;
         buffer.last_used   = get_current_time();
     }
 
@@ -474,6 +549,37 @@ class depth_buffer_manager_t : public noncopyable_t
         for (auto& buffer : buffers)
         {
             if (buffer.attached_to == fb)
+            {
+                return buffer;
+            }
+        }
+
+        /** New buffer? */
+        if (buffers.size() < MAX_BUFFERS)
+        {
+            buffers.push_back(depth_buffer_t{});
+
+            return buffers.back();
+        }
+
+        /** Evict oldest */
+        auto oldest = &buffers.front();
+        for (auto& buffer : buffers)
+        {
+            if (buffer.last_used < oldest->last_used)
+            {
+                oldest = &buffer;
+            }
+        }
+
+        return *oldest;
+    }
+
+    depth_buffer_t& find_buffer(struct wlr_buffer *fb)
+    {
+        for (auto& buffer : buffers)
+        {
+            if (buffer.attached_fb == fb)
             {
                 return buffer;
             }
@@ -680,6 +786,8 @@ class wf::render_manager::impl
 
     wf::option_wrapper_t<wf::color_t> background_color_opt;
 
+    wl_array layers;
+
     impl(output_t *o) :
         output(o)
     {
@@ -691,6 +799,8 @@ class wf::render_manager::impl
 
         on_frame.set_callback([&] (void*)
         {
+            wl_array_init(&layers);
+
             delay_manager->start_frame();
 
             auto repaint_delay = delay_manager->get_delay();
@@ -788,12 +898,24 @@ class wf::render_manager::impl
 
     /* Actual rendering functions */
 
+/* XXX: TODO: Add a bind_output for Pixman */
+
     /**
      * Bind the output's EGL surface, allocate buffers
      */
     void bind_output(uint32_t fb)
     {
-        OpenGL::bind_output(fb);
+        if (!runtime_config.use_pixman)
+            OpenGL::bind_output(fb);
+
+        /* Make sure the default buffer has enough size */
+        postprocessing->allocate(output->handle->width, output->handle->height);
+    }
+
+    void bind_output(struct wlr_buffer *fb)
+    {
+        if (runtime_config.use_pixman)
+           Pixman::bind_output(fb);
 
         /* Make sure the default buffer has enough size */
         postprocessing->allocate(output->handle->width, output->handle->height);
@@ -811,10 +933,20 @@ class wf::render_manager::impl
              * visible */
             swap_damage |= output_damage->get_wlr_damage_box();
 
-            OpenGL::render_begin(output->handle->width, output->handle->height,
-                postprocessing->output_fb);
-            OpenGL::clear({1, 1, 0, 1});
-            OpenGL::render_end();
+            if (!runtime_config.use_pixman)
+            {
+                OpenGL::render_begin(output->handle->width, output->handle->height,
+                    postprocessing->output_fb);
+                OpenGL::clear({1, 1, 0, 1});
+                OpenGL::render_end();
+            }
+            else
+            {
+                Pixman::render_begin(output->handle->width, output->handle->height,
+                    postprocessing->output_fb);
+                Pixman::clear({1, 1, 0, 1});
+                Pixman::render_end();
+            }
         }
 
         auto cws = output->workspace->get_current_workspace();
@@ -903,8 +1035,8 @@ class wf::render_manager::impl
             if (candidate != last_scanout)
             {
                 last_scanout = candidate;
-                LOGD("Scanned out ",
-                    candidate->get_title(), ",", candidate->get_app_id());
+                LOGD("Scanned out Surface ",
+                    surface, " ", candidate->get_title(), ",", candidate->get_app_id());
             }
 
             return true;
@@ -946,22 +1078,94 @@ class wf::render_manager::impl
 
     void update_bound_output()
     {
-        int current_fb;
-        GL_CALL(glGetIntegerv(GL_DRAW_FRAMEBUFFER_BINDING, &current_fb));
-        bind_output(current_fb);
-
-        postprocessing->set_output_framebuffer(current_fb);
-        const auto& default_fb = postprocessing->get_target_framebuffer();
-        depth_buffer_manager->ensure_depth_buffer(
-            default_fb.fb, default_fb.viewport_width, default_fb.viewport_height);
-
-        for (auto& row : this->default_streams)
+        if (!runtime_config.use_pixman)
         {
-            for (auto& ws : row)
-            {
-                ws.buffer.fb = current_fb;
-            }
+           int current_fb;
+
+           GL_CALL(glGetIntegerv(GL_DRAW_FRAMEBUFFER_BINDING, &current_fb));
+           bind_output(current_fb);
+           postprocessing->set_output_framebuffer(current_fb);
+           const auto& default_fb = postprocessing->get_target_framebuffer();
+           depth_buffer_manager->ensure_depth_buffer(
+               default_fb.fb, default_fb.viewport_width, default_fb.viewport_height);
+
+           for (auto& row : this->default_streams)
+           {
+               for (auto& ws : row)
+               {
+                   ws.buffer.fb = current_fb;
+               }
+           }
         }
+        else
+        {
+           struct wlr_buffer *current_fb;
+
+           /* current_fb = */
+           /*    wlr_pixman_renderer_get_current_image(wf::get_core().renderer); */
+           current_fb =
+               wlr_pixman_renderer_get_current_buffer(wf::get_core().renderer);
+           bind_output(current_fb);
+           postprocessing->set_output_framebuffer(current_fb);
+           const auto& default_fb = postprocessing->get_target_framebuffer();
+           depth_buffer_manager->ensure_depth_buffer(
+               default_fb.buffer, default_fb.viewport_width, default_fb.viewport_height);
+
+           for (auto& row : this->default_streams)
+           {
+               for (auto& ws : row)
+               {
+                   ws.buffer.buffer = current_fb;
+               }
+           }
+        }
+    }
+
+    /* XXX */
+    void update_output_layers()
+    {
+        /* check if the session is active. If not, then no need for layers */
+        auto session = wlr_backend_get_session(wf::get_core().backend);
+        if (!session->active) return;
+
+        wlr_log(WLR_DEBUG, "Update Output %p Layers", output);
+
+        /* setup layer states */
+        for (auto& surf : output->layer_surfaces)
+        {
+            wf::geometry_t geom = {0, 0, 0, 0};
+
+            if (!surf->priv->layer) continue;
+            if (!surf->is_mapped()) continue;
+
+            wlr_log(WLR_DEBUG, "\tAdd Surface Interface %p Layer %p To Output",
+                surf, surf->priv->layer);
+
+            auto view = (wf::view_interface_t *)surf->get_main_surface();
+            if (view) geom = view->get_wm_geometry();
+
+            struct wlr_output_layer_state *state =
+                (struct wlr_output_layer_state *)wl_array_add(&layers, sizeof(*state));
+            *state = (struct wlr_output_layer_state)
+              {
+                  .layer = surf->priv->layer,
+                  .buffer = surf->priv->layer_buffer,
+                  .x = geom.x,
+                  .y = geom.y,
+                  .accepted = false,
+              };
+        }
+
+        /* no need for an output test if we did not set any layers */
+        if (layers.size < 1) return;
+
+        /* set layers on output */
+        wlr_output_set_layers(output->handle, (struct wlr_output_layer_state *)layers.data,
+            layers.size / sizeof(struct wlr_output_layer_state));
+
+        /* test output */
+        if (!wlr_output_test(output->handle))
+            wlr_log(WLR_ERROR, "wlr_output_test() failed in update_output_layers");
     }
 
     /**
@@ -1001,6 +1205,9 @@ class wf::render_manager::impl
             return;
         }
 
+        /* XXX: Update output layers */
+        update_output_layers();
+
         // Accumulate damage now, when we are sure we will render the frame.
         // Doing this earlier may mean that the damage from the previous frames
         // creeps into the current frame damage, if we had skipped a frame.
@@ -1024,25 +1231,42 @@ class wf::render_manager::impl
         postprocessing->run_post_effects();
         if (output_inhibit_counter)
         {
-            OpenGL::render_begin(output->handle->width, output->handle->height,
-                postprocessing->output_fb);
-            OpenGL::clear({0, 0, 0, 1});
-            OpenGL::render_end();
+            if (!runtime_config.use_pixman)
+            {
+                OpenGL::render_begin(output->handle->width, output->handle->height,
+                    postprocessing->output_fb);
+                OpenGL::clear({0, 0, 0, 1});
+                OpenGL::render_end();
+            }
+            else
+            {
+                Pixman::render_begin(output->handle->width, output->handle->height,
+                    postprocessing->output_fb);
+                Pixman::clear({0, 0, 0, 1});
+                Pixman::render_end();
+            }
         }
 
         /* Part 5: render sw cursors
          * We render software cursors after everything else
          * for consistency with hardware cursor planes */
-        OpenGL::render_begin();
-        wlr_renderer_begin(wf::get_core().renderer,
-            output->handle->width, output->handle->height);
-        wlr_output_render_software_cursors(output->handle,
-            swap_damage.to_pixman());
-        wlr_renderer_end(wf::get_core().renderer);
-        OpenGL::render_end();
+        if (!runtime_config.use_pixman)
+        {
+            OpenGL::render_begin();
+            wlr_renderer_begin(wf::get_core().renderer,
+                output->handle->width, output->handle->height);
+            wlr_output_render_software_cursors(output->handle,
+                swap_damage.to_pixman());
+            wlr_renderer_end(wf::get_core().renderer);
+            OpenGL::render_end();
+        }
 
         /* Part 6: finalize frame: swap buffers, send frame_done, etc */
-        OpenGL::unbind_output();
+        if (!runtime_config.use_pixman)
+            OpenGL::unbind_output();
+        else
+            Pixman::unbind_output();
+
         output_damage->swap_buffers(swap_damage);
         swap_damage.clear();
         post_paint();
@@ -1105,6 +1329,9 @@ class wf::render_manager::impl
                 }
             }
         }
+
+        /* XXX: release layers */
+        wl_array_release(&layers);
     }
 
     /* Workspace stream implementation */
@@ -1339,9 +1566,18 @@ class wf::render_manager::impl
             // ws_damage |= get_damage_box();
         }
 
-        OpenGL::render_begin();
-        stream.buffer.allocate(output->handle->width, output->handle->height);
-        OpenGL::render_end();
+        if (!runtime_config.use_pixman)
+        {
+            OpenGL::render_begin();
+            stream.buffer.allocate(output->handle->width, output->handle->height);
+            OpenGL::render_end();
+        }
+        else
+        {
+            /* Pixman::render_begin(); */
+            stream.buffer.allocate(output->handle->width, output->handle->height);
+            /* Pixman::render_end(); */
+        }
 
         repaint.fb = postprocessing->get_target_framebuffer();
         if ((stream.buffer.tex != 0))
@@ -1364,14 +1600,26 @@ class wf::render_manager::impl
 
     void clear_empty_areas(workspace_stream_repaint_t& repaint, wf::color_t color)
     {
-        OpenGL::render_begin(repaint.fb);
-        for (const auto& rect : repaint.ws_damage)
+        if (!runtime_config.use_pixman)
         {
-            repaint.fb.logic_scissor(wlr_box_from_pixman_box(rect));
-            OpenGL::clear(color, GL_COLOR_BUFFER_BIT);
+            OpenGL::render_begin(repaint.fb);
+            for (const auto& rect : repaint.ws_damage)
+            {
+                repaint.fb.logic_scissor(wlr_box_from_pixman_box(rect));
+                OpenGL::clear(color, GL_COLOR_BUFFER_BIT);
+            }
+            OpenGL::render_end();
         }
-
-        OpenGL::render_end();
+        else
+        {
+            Pixman::render_begin(repaint.fb);
+            for (const auto& rect : repaint.ws_damage)
+            {
+                repaint.fb.logic_scissor(wlr_box_from_pixman_box(rect));
+                Pixman::clear(color);
+            }
+            Pixman::render_end();
+        }
     }
 
     void send_sampled_on_output(wf::surface_interface_t *surface)

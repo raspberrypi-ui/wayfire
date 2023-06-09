@@ -3,6 +3,8 @@
 #include "wayfire/output.hpp"
 #include "wayfire/core.hpp"
 #include "wayfire/debug.hpp"
+#include <wayfire/pixman.hpp>
+#include "../main.hpp"
 
 extern "C"
 {
@@ -31,14 +33,21 @@ class test_view : public wayfire_compositor_view_t,
         wlr_matrix_project_box(matrix, &g, WL_OUTPUT_TRANSFORM_NORMAL, 0,
             projection);
 
-        OpenGL::render_begin(fb);
+        if (!runtime_config.use_pixman)
+         OpenGL::render_begin(fb);
+        else
+         Pixman::render_begin(fb);
+
         auto sbox = scissor;
         wlr_renderer_scissor(wf::get_core().renderer, &sbox);
 
         float color[] = {1.0f, 0.0, 1.0f, 1.0f};
 
         wlr_render_quad_with_matrix(wf::get_core().renderer, color, matrix);
-        OpenGL::render_end();
+        if (!runtime_config.use_pixman)
+         OpenGL::render_end();
+       else
+         Pixman::render_end();
     }
 
     virtual bool accepts_input(int sx, int sy)

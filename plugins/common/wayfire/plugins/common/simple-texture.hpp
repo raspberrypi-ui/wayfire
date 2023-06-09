@@ -1,6 +1,7 @@
 #pragma once
 #include <wayfire/opengl.hpp>
 #include <wayfire/nonstd/noncopyable.hpp>
+#include <stdlib.h>
 
 namespace wf
 {
@@ -21,9 +22,16 @@ struct simple_texture_t : public noncopyable_t
             return;
         }
 
-        OpenGL::render_begin();
-        GL_CALL(glDeleteTextures(1, &tex));
-        OpenGL::render_end();
+       /* NB: We have to use the getenv version of this test as various
+        * plugins include this file and trying to include ../main.hpp
+        * causes compile errors for those plugins */
+       if (!getenv("WAYFIRE_USE_PIXMAN"))
+         {
+            OpenGL::render_begin();
+            GL_CALL(glDeleteTextures(1, &tex));
+            OpenGL::render_end();
+         }
+
         this->tex = -1;
     }
 

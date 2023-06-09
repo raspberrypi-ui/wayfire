@@ -3,6 +3,7 @@
 
 #include <wayfire/opengl.hpp>
 #include <wayfire/output.hpp>
+#include <wayfire/framebuffer.hpp>
 
 namespace OpenGL
 {
@@ -14,6 +15,7 @@ void fini();
 void bind_output(uint32_t fb);
 /** Indicate the output frame has been finished */
 void unbind_output();
+   bool fb_alloc(wf::framebuffer_base_t *fb, int width, int height);
 }
 
 #endif /* end of include guard: WF_OPENGL_PRIV_HPP */

@@ -10,8 +10,9 @@
 #include <wayfire/view-transform.hpp>
 #include <wayfire/util/duration.hpp>
 #include <wayfire/util/log.hpp>
+#include <wayfire/pixman.hpp>
 #include <cmath>
-
+#include "../main.hpp"
 
 namespace wf
 {
@@ -211,14 +212,24 @@ class scale_around_grab_t : public wf::view_transformer_t
         // Get target size
         auto bbox = get_bounding_box(src_box, src_box);
 
-        OpenGL::render_begin(target_fb);
+        if (!runtime_config.use_pixman)
+         OpenGL::render_begin(target_fb);
+        else
+         Pixman::render_begin(target_fb);
+
         for (auto& rect : damage)
         {
             target_fb.logic_scissor(wlr_box_from_pixman_box(rect));
-            OpenGL::render_texture(src_tex, target_fb, bbox);
+            if (!runtime_config.use_pixman)
+             OpenGL::render_texture(src_tex, target_fb, bbox);
+            else
+             Pixman::render_texture(src_tex, target_fb, bbox);
         }
 
-        OpenGL::render_end();
+        if (!runtime_config.use_pixman)
+         OpenGL::render_end();
+        else
+         Pixman::render_end();
     }
 };
 

@@ -13,8 +13,10 @@
 
 #include <wayfire/render-manager.hpp>
 #include <wayfire/opengl.hpp>
+#include <wayfire/pixman.hpp>
 #include <wayfire/plugins/common/cairo-util.hpp>
 #include <wayfire/plugins/common/simple-texture.hpp>
+#include "../main.hpp"
 
 struct scale_key_repeat_t
 {
@@ -378,17 +380,35 @@ class scale_title_filter : public wf::singleton_plugin_t<scale_title_filter_text
         auto damage = output->render->get_scheduled_damage() & geometry;
         auto ortho  = out_fb.get_orthographic_projection();
 
-        OpenGL::render_begin(out_fb);
-        for (auto& box : damage)
-        {
-            out_fb.logic_scissor(wlr_box_from_pixman_box(box));
-            OpenGL::render_transformed_texture(tex.tex, gl_geom, tex_geom, ortho,
-                glm::vec4(1.f),
-                OpenGL::TEXTURE_TRANSFORM_INVERT_Y |
-                OpenGL::TEXTURE_USE_TEX_GEOMETRY);
-        }
+        if (!runtime_config.use_pixman)
+         {
+            OpenGL::render_begin(out_fb);
+            for (auto& box : damage)
+              {
+                 out_fb.logic_scissor(wlr_box_from_pixman_box(box));
+                 OpenGL::render_transformed_texture(tex.tex, gl_geom, tex_geom, ortho,
+                                                    glm::vec4(1.f),
+                                                    OpenGL::TEXTURE_TRANSFORM_INVERT_Y |
+                                                    OpenGL::TEXTURE_USE_TEX_GEOMETRY);
+              }
 
-        OpenGL::render_end();
+            OpenGL::render_end();
+         }
+       else
+         {
+            Pixman::render_begin(out_fb);
+            for (auto& box : damage)
+              {
+                 out_fb.logic_scissor(wlr_box_from_pixman_box(box));
+                 /* NB: We do not have a Pixman::render_texture
+                  * for wf::simple_texture_t as that appears to be
+                  * strictly OpenGL */
+                 /* Pixman::render_texture(tex, out_fb, geometry, */
+                 /*                        glm::vec4(1.f)); */
+              }
+
+            Pixman::render_end();
+         }
     }
 
     /* clear everything rendered by this plugin and deactivate rendering */

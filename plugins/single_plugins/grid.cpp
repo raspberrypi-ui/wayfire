@@ -9,10 +9,12 @@
 #include <linux/input-event-codes.h>
 #include "wayfire/signal-definitions.hpp"
 #include <wayfire/plugins/common/geometry-animation.hpp>
+#include <wayfire/pixman.hpp>
 
 #include "snap_signal.hpp"
 #include <wayfire/plugins/wobbly/wobbly-signal.hpp>
 #include <wayfire/view-transform.hpp>
+#include "../main.hpp"
 
 const std::string grid_view_id = "grid-view";
 
@@ -35,11 +37,24 @@ class grid_crossfade_transformer : public wf::view_2D
         auto w = original_buffer.scale * original_buffer.geometry.width;
         auto h = original_buffer.scale * original_buffer.geometry.height;
 
-        OpenGL::render_begin();
-        original_buffer.allocate(w, h);
-        original_buffer.bind();
-        OpenGL::clear({0, 0, 0, 0});
-        OpenGL::render_end();
+        if (!runtime_config.use_pixman)
+         {
+            OpenGL::render_begin();
+            original_buffer.allocate(w, h);
+            original_buffer.bind();
+            OpenGL::clear({0, 0, 0, 0});
+            OpenGL::render_end();
+         }
+       else
+         {
+            /* NB: We do not call Pixman::render_begin here as the
+             * bind() call below will do that for us */
+            /* Pixman::render_begin(); */
+            original_buffer.allocate(w, h);
+            original_buffer.bind();
+            Pixman::clear({0, 0, 0, 0});
+            Pixman::render_end();
+         }
 
         auto og = view->get_output_geometry();
         for (auto& surface : view->enumerate_surfaces(wf::origin(og)))
@@ -81,18 +96,31 @@ class grid_crossfade_transformer : public wf::view_2D
         }
 
         // First render the original buffer with corresponding alpha
-        OpenGL::render_begin(fb);
-        fb.logic_scissor(scissor_box);
-        OpenGL::render_texture({original_buffer.tex}, fb, bbox,
-            glm::vec4{1.0f, 1.0f, 1.0f, 1.0 - ra});
-        OpenGL::render_end();
+        if (!runtime_config.use_pixman)
+         {
+            OpenGL::render_begin(fb);
+            fb.logic_scissor(scissor_box);
+            OpenGL::render_texture({original_buffer.tex}, fb, bbox,
+                                   glm::vec4{1.0f, 1.0f, 1.0f, 1.0 - ra});
+            OpenGL::render_end();
+         }
+       else
+         {
+            Pixman::render_begin(fb);
+            fb.logic_scissor(scissor_box);
+            Pixman::render_texture({original_buffer.tex}, fb, bbox,
+                                   glm::vec4{1.0f, 1.0f, 1.0f, 1.0 - ra});
+            Pixman::render_end();
+         }
     }
 
     ~grid_crossfade_transformer()
     {
-        OpenGL::render_begin();
+        if (!runtime_config.use_pixman)
+         OpenGL::render_begin();
         original_buffer.release();
-        OpenGL::render_end();
+        if (!runtime_config.use_pixman)
+         OpenGL::render_end();
     }
 
     // The contents of the view before the change.

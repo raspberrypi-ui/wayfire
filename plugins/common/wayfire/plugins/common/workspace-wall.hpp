@@ -3,6 +3,8 @@
 
 #include <glm/gtc/matrix_transform.hpp>
 #include "workspace-stream-sharing.hpp"
+#include <wayfire/pixman.hpp>
+#include "../main.hpp"
 
 namespace wf
 {
@@ -104,10 +106,18 @@ class workspace_wall_t : public wf::signal_provider_t
     {
         update_streams();
 
-        OpenGL::render_begin(fb);
+        if (!runtime_config.use_pixman)
+         OpenGL::render_begin(fb);
+        else
+         Pixman::render_begin(fb);
+
         fb.logic_scissor(geometry);
 
-        OpenGL::clear(this->background_color);
+        if (!runtime_config.use_pixman)
+         OpenGL::clear(this->background_color);
+        else
+         Pixman::clear(this->background_color);
+
         auto wall_matrix =
             calculate_viewport_transformation_matrix(this->viewport, geometry);
         /* After all transformations of the framebuffer, the workspace should
@@ -116,12 +126,25 @@ class workspace_wall_t : public wf::signal_provider_t
         for (auto& ws : get_visible_workspaces(this->viewport))
         {
             auto ws_matrix = calculate_workspace_matrix(ws);
-            OpenGL::render_transformed_texture(
-                streams->get(ws).buffer.tex, workspace_geometry,
-                fb.get_orthographic_projection() * wall_matrix * ws_matrix);
+           if (!runtime_config.use_pixman)
+             {
+                OpenGL::render_transformed_texture(
+                                                   streams->get(ws).buffer.tex, workspace_geometry,
+                                                   fb.get_orthographic_projection() * wall_matrix * ws_matrix);
+             }
+           /* XXX: FIXME: Implement for Pixman */
+           /* else */
+           /*   { */
+           /*      Pixman::render_transformed_texture( */
+           /*                                         streams->get(ws).buffer.tex, workspace_geometry, */
+           /*                                         fb.get_orthographic_projection() * wall_matrix * ws_matrix); */
+           /*   } */
         }
 
-        OpenGL::render_end();
+        if (!runtime_config.use_pixman)
+         OpenGL::render_end();
+        else
+         Pixman::render_end();
 
         wall_frame_event_t data{fb};
         this->emit_signal("frame", &data);

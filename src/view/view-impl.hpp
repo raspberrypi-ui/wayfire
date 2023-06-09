@@ -11,6 +11,7 @@
 // for emit_map_*()
 #include <wayfire/compositor-view.hpp>
 #include <wayfire/compositor-surface.hpp>
+#include "../main.hpp"
 
 struct wlr_seat;
 namespace wf
@@ -71,7 +72,10 @@ class view_interface_t::view_priv_impl
         wf::region_t cached_damage;
         bool valid()
         {
-            return this->fb != (uint32_t)-1;
+           if (!runtime_config.use_pixman)
+             return this->fb != (uint32_t)-1;
+           else
+             return this->buffer != nullptr;
         }
     } offscreen_buffer;
 

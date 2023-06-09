@@ -1,4 +1,5 @@
 #include "opengl-priv.hpp"
+#include "pixman-priv.hpp"
 #include "wayfire/output.hpp"
 #include "wayfire/core.hpp"
 #include "wayfire/output-layout.hpp"
@@ -11,6 +12,7 @@
 #include "seat/seat.hpp"
 #include "seat/cursor.hpp"
 #include "core-impl.hpp"
+#include "../main.hpp"
 
 #include <xf86drmMode.h>
 #include <sstream>
@@ -279,21 +281,28 @@ class output_cloner_t
             int w = ev->buffer->width;
             int h = ev->buffer->height;
 
-            OpenGL::render_begin();
+            if (!runtime_config.use_pixman)
+               OpenGL::render_begin();
             content.allocate(w, h);
 
             // Bind buffer
             auto renderer = get_core().renderer;
             wlr_renderer_begin_with_buffer(renderer, ev->buffer);
 
-            // Store a copy for ourselves
-            GL_CALL(glBindFramebuffer(GL_DRAW_FRAMEBUFFER, content.fb));
-            GL_CALL(glBlitFramebuffer(0, 0, w, h,
-                0, 0, w, h,
-                GL_COLOR_BUFFER_BIT, GL_LINEAR));
+            if (!runtime_config.use_pixman)
+             {
+                /* XXX: TODO: Implement Blit for Pixman */
+                // Store a copy for ourselves
+                GL_CALL(glBindFramebuffer(GL_DRAW_FRAMEBUFFER, content.fb));
+                GL_CALL(glBlitFramebuffer(0, 0, w, h,
+                                          0, 0, w, h,
+                                          GL_COLOR_BUFFER_BIT, GL_LINEAR));
+             }
 
             wlr_renderer_end(renderer);
-            OpenGL::render_end();
+
+            if (!runtime_config.use_pixman)
+               OpenGL::render_end();
 
             wlr_output_damage_whole(destination);
             wlr_output_schedule_frame(destination);
@@ -310,16 +319,33 @@ class output_cloner_t
             if ((w > 0) && (h > 0))
             {
                 int current_fb;
-                GL_CALL(glGetIntegerv(GL_DRAW_FRAMEBUFFER_BINDING, &current_fb));
-                OpenGL::bind_output(current_fb);
 
-                OpenGL::render_begin();
-                GL_CALL(glBindFramebuffer(GL_READ_FRAMEBUFFER, content.fb));
-                GL_CALL(glBlitFramebuffer(0, 0, w, h,
-                    0, 0, destination->width, destination->height,
-                    GL_COLOR_BUFFER_BIT, GL_LINEAR));
+                if (!runtime_config.use_pixman)
+                 {
+                    GL_CALL(glGetIntegerv(GL_DRAW_FRAMEBUFFER_BINDING, &current_fb));
+                    OpenGL::bind_output(current_fb);
 
-                OpenGL::render_end();
+                    OpenGL::render_begin();
+                    GL_CALL(glBindFramebuffer(GL_READ_FRAMEBUFFER, content.fb));
+                    GL_CALL(glBlitFramebuffer(0, 0, w, h,
+                                              0, 0, destination->width, destination->height,
+                                              GL_COLOR_BUFFER_BIT, GL_LINEAR));
+
+                    OpenGL::render_end();
+                 }
+               /* XXX: TODO: Implement Blit for Pixman */
+               /* else */
+               /*   { */
+               /*      Pixman::bind_output(current_fb); */
+
+               /*      Pixman::render_begin(); */
+               /*      GL_CALL(glBindFramebuffer(GL_READ_FRAMEBUFFER, content.fb)); */
+               /*      GL_CALL(glBlitFramebuffer(0, 0, w, h, */
+               /*                                0, 0, destination->width, destination->height, */
+               /*                                GL_COLOR_BUFFER_BIT, GL_LINEAR)); */
+
+               /*      Pixman::render_end(); */
+               /*   } */
             }
 
             wlr_renderer_end(renderer);
@@ -333,9 +359,18 @@ class output_cloner_t
     ~output_cloner_t()
     {
         wlr_output_lock_software_cursors(source, false);
-        OpenGL::render_begin();
-        content.release();
-        OpenGL::render_end();
+        if (!runtime_config.use_pixman)
+         {
+            OpenGL::render_begin();
+            content.release();
+            OpenGL::render_end();
+         }
+       else
+         {
+            Pixman::render_begin();
+            content.release();
+            Pixman::render_end();
+         }
     }
 
     output_cloner_t(const output_cloner_t&) = delete;
@@ -352,6 +387,7 @@ struct output_layout_output_t
 
     std::unique_ptr<wf::output_impl_t> output;
     wl_listener_wrapper on_destroy, on_mode;
+    wl_listener_wrapper on_frame;
 
     std::shared_ptr<wf::config::section_t> config_section;
     wf::option_wrapper_t<wf::output_config::mode_t> mode_opt;
@@ -373,6 +409,7 @@ struct output_layout_output_t
     {
         this->handle = handle;
         on_destroy.connect(&handle->events.destroy);
+        on_frame.connect(&handle->events.frame);
         initialize_config_options();
 
         bool is_nested_compositor = wlr_output_is_wl(handle);

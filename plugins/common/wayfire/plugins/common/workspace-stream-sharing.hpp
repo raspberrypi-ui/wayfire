@@ -7,6 +7,7 @@
 #include <wayfire/render-manager.hpp>
 #include <wayfire/workspace-stream.hpp>
 #include <wayfire/workspace-manager.hpp>
+#include "../main.hpp"
 
 namespace wf
 {
@@ -53,7 +54,9 @@ class workspace_stream_pool_t : public noncopyable_t, public wf::custom_data_t
 
     ~workspace_stream_pool_t()
     {
-        OpenGL::render_begin();
+       if (!runtime_config.use_pixman)
+         OpenGL::render_begin();
+
         for (auto& row : this->streams)
         {
             for (auto& stream : row)
@@ -62,7 +65,8 @@ class workspace_stream_pool_t : public noncopyable_t, public wf::custom_data_t
             }
         }
 
-        OpenGL::render_end();
+       if (!runtime_config.use_pixman)
+         OpenGL::render_end();
     }
 
     /**

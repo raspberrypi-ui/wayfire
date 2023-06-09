@@ -1,9 +1,11 @@
 #include <wayfire/core.hpp>
 #include <wayfire/output.hpp>
 #include <wayfire/opengl.hpp>
+#include <wayfire/pixman.hpp>
 #include <wayfire/compositor-view.hpp>
 #include <wayfire/signal-definitions.hpp>
 #include <cstring>
+#include "../main.hpp"
 
 #include <glm/gtc/matrix_transform.hpp>
 
@@ -199,14 +201,26 @@ static void render_colored_rect(const wf::framebuffer_t& fb,
         color.b * color.a,
         color.a};
 
-    OpenGL::render_rectangle({x, y, w, h}, premultiply,
-        fb.get_orthographic_projection());
+    if (!runtime_config.use_pixman)
+     {
+        OpenGL::render_rectangle({x, y, w, h}, premultiply,
+                                 fb.get_orthographic_projection());
+     }
+   else
+     {
+        Pixman::render_rectangle({x, y, w, h}, premultiply,
+                                 fb.get_orthographic_projection());
+     }
 }
 
 void wf::color_rect_view_t::simple_render(const wf::framebuffer_t& fb, int x, int y,
     const wf::region_t& damage)
 {
-    OpenGL::render_begin(fb);
+    if (!runtime_config.use_pixman)
+        OpenGL::render_begin(fb);
+    else
+        Pixman::render_begin(fb);
+
     for (const auto& box : damage)
     {
         fb.logic_scissor(wlr_box_from_pixman_box(box));
@@ -232,7 +246,10 @@ void wf::color_rect_view_t::simple_render(const wf::framebuffer_t& fb, int x, in
             _color);
     }
 
-    OpenGL::render_end();
+    if (!runtime_config.use_pixman)
+        OpenGL::render_end();
+    else
+        Pixman::render_end();
 }
 
 void wf::color_rect_view_t::move(int x, int y)
