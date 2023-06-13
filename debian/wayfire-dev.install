@@ -31,3 +31,6 @@ usr/include/wayfire/view.hpp
 usr/include/wayfire/workspace-manager.hpp
 usr/include/wayfire/workspace-stream.hpp
 usr/lib/*/pkgconfig/wayfire.pc
+usr/include/wayfire/framebuffer.hpp
+usr/include/wayfire/pixman.hpp
+usr/include/wayfire/texture.hpp
