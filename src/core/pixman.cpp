@@ -7,6 +7,7 @@
 #include <wayfire/nonstd/wlroots-full.hpp>
 #include <sys/mman.h>
 #include <drm_fourcc.h>
+#include <wlr/types/wlr_matrix.h>
 
 namespace Pixman
 {
@@ -70,6 +71,10 @@ namespace Pixman
    void render_rectangle(wf::geometry_t box, wf::color_t color, glm::mat4 matrix)
      {
         /* wlr_log(WLR_DEBUG, "Pixman Render Rectangle"); */
+        /* wlr_log(WLR_DEBUG, "\tColor: %9.6f %9.6f %9.6f %9.6f", */
+        /*         (float)color.r, (float)color.g, (float)color.b, (float)color.a); */
+        /* wlr_log(WLR_DEBUG, "\tBox: %d %d %d %d", box.x, box.y, box.width, box.height); */
+
         auto renderer = wf::get_core().renderer;
         const struct wlr_box wbox =
           {
@@ -78,6 +83,7 @@ namespace Pixman
              .width = box.width,
              .height = box.height,
           };
+        /* FIXME: Are the passed in values already premultiplied ?? */
         const float c[4] =
           {
              (float)color.r, (float)color.g, (float)color.b, (float)color.a
@@ -85,8 +91,6 @@ namespace Pixman
 
         float mat[9];
         wlr_matrix_identity(mat);
-        wlr_matrix_scale(mat, box.width, box.height);
-
         wlr_render_rect(renderer, &wbox, c, mat);
      }
 
@@ -128,6 +132,7 @@ namespace Pixman
         /* wlr_log(WLR_DEBUG, "\tgl_geometry: %9.6f %9.6f %9.6f %9.6f", */
         /*         g.x1, g.y1, g.x2, g.y2); */
 
+        if (!tex) return;
         auto renderer = wf::get_core().renderer;
         auto output = wf::get_core().get_active_output();
         const struct wlr_box wbox =
@@ -149,6 +154,8 @@ namespace Pixman
         /*         tex); */
         /* wlr_log(WLR_DEBUG, "\twf:geometry: %d %d %d %d", */
         /*         geometry.x, geometry.y, geometry.width, geometry.height); */
+
+        if (!tex) return;
 
         gl_geometry gg;
 

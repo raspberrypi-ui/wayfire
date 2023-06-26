@@ -72,9 +72,11 @@ namespace wf
           }
         else
           {
-             if (!buffer) return;
              auto renderer = wf::get_core().renderer;
-             wlr_renderer_begin_with_buffer(renderer, buffer);
+             if (buffer)
+               wlr_renderer_begin_with_buffer(renderer, buffer);
+             else
+               wlr_renderer_begin(renderer, viewport_width, viewport_height);
           }
      }
 

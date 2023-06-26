@@ -129,6 +129,8 @@ void wf::surface_interface_t::set_output(wf::output_t *output)
     priv->output = output;
 
     /* create new wlr_output_layer */
+   /* FIXME: This should only be called for the Main surface,
+    * not any subsurfaces (i think) */
     create_output_layer(priv->output);
 
     for (auto& c : priv->surface_children_above)
@@ -557,13 +559,6 @@ void wf::wlr_surface_base_t::_simple_render(const wf::framebuffer_t& fb,
    else
      {
         wlr_log(WLR_DEBUG, "Pixman surface simple_render render_texture");
-
-        auto texture = wlr_surface_get_texture(_as_si->priv->wsurface);
-        if (!texture)
-          {
-             wlr_log(WLR_DEBUG, "\tSurface has no texture");
-             return;
-          }
 
         Pixman::render_begin(fb);
         for (const auto& rect : damage)

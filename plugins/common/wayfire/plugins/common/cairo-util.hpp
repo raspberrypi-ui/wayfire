@@ -5,6 +5,8 @@
 #include <wayfire/config/types.hpp>
 #include <cairo.h>
 #include <stdlib.h>
+#include <wayfire/util/log.hpp>
+#include <drm_fourcc.h>
 
 namespace wf
 {
@@ -22,20 +24,77 @@ static void cairo_surface_upload_to_texture(
 {
     buffer.width  = cairo_image_surface_get_width(surface);
     buffer.height = cairo_image_surface_get_height(surface);
-    if (buffer.tex == (GLuint) - 1)
-    {
-        GL_CALL(glGenTextures(1, &buffer.tex));
-    }
 
     auto src = cairo_image_surface_get_data(surface);
 
-    GL_CALL(glBindTexture(GL_TEXTURE_2D, buffer.tex));
-    GL_CALL(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR));
-    GL_CALL(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR));
-    GL_CALL(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_R, GL_BLUE));
-    GL_CALL(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_B, GL_RED));
-    GL_CALL(glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA,
-        buffer.width, buffer.height, 0, GL_RGBA, GL_UNSIGNED_BYTE, src));
+   /* NB: We have to use the getenv version of this test as various
+    * plugins include this file and trying to include ../main.hpp
+    * causes compile errors for those plugins */
+    if (!getenv("WAYFIRE_USE_PIXMAN"))
+     {
+        if (buffer.tex == (GLuint) - 1)
+          {
+             GL_CALL(glGenTextures(1, &buffer.tex));
+          }
+
+        GL_CALL(glBindTexture(GL_TEXTURE_2D, buffer.tex));
+        GL_CALL(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR));
+        GL_CALL(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR));
+        GL_CALL(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_R, GL_BLUE));
+        GL_CALL(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_B, GL_RED));
+        GL_CALL(glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA,
+                             buffer.width, buffer.height, 0, GL_RGBA, GL_UNSIGNED_BYTE, src));
+     }
+   else
+     {
+        void *data;
+        uint32_t format;
+        size_t stride;
+        auto renderer = wf::get_core().renderer;
+
+        if (!buffer.buffer)
+          {
+             auto allocator = wf::get_core().allocator;
+             const struct wlr_drm_format_set *fset;
+             const struct wlr_drm_format *dformat;
+
+             fset = wlr_renderer_get_render_formats(renderer);
+             if (!fset)
+               {
+                  wlr_log(WLR_DEBUG, "Cannot get render foramts");
+                  return;
+               }
+             dformat = wlr_drm_format_set_get(fset, DRM_FORMAT_ARGB8888);
+             if (!dformat)
+               {
+                  wlr_log(WLR_DEBUG, "Cannot get drm format");
+                  return;
+               }
+
+             buffer.buffer =
+               wlr_allocator_create_buffer(allocator, buffer.width,
+                                           buffer.height, dformat);
+             if (!buffer.buffer)
+               {
+                  wlr_log(WLR_DEBUG, "Cannot create texture buffer");
+                  return;
+               }
+          }
+
+        /* we should have a buffer by now, copy cairo_surface pixels */
+        if (!wlr_buffer_begin_data_ptr_access(buffer.buffer,
+                                              WLR_BUFFER_DATA_PTR_ACCESS_WRITE,
+                                              &data, &format, &stride))
+          {
+             wlr_log(WLR_DEBUG, "Cannot access buffer data ptr");
+             return;
+          }
+
+        memcpy(data, src, stride * buffer.height);
+        wlr_buffer_end_data_ptr_access(buffer.buffer);
+
+        buffer.texture = wlr_texture_from_buffer(renderer, buffer.buffer);
+     }
 }
 
 namespace wf
@@ -201,10 +260,12 @@ struct cairo_text_t
        if (!getenv("WAYFIRE_USE_PIXMAN"))
          {
             OpenGL::render_begin();
-            /* NB: We cannot do this with pixman as 
-             * cairo_surface_upload_to_texture uses glTexture functions */
             cairo_surface_upload_to_texture(surface, tex);
             OpenGL::render_end();
+         }
+       else
+         {
+            cairo_surface_upload_to_texture(surface, tex);
          }
 
         return ret;
