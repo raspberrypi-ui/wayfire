@@ -39,10 +39,11 @@ struct simple_texture_t : public noncopyable_t
          }
        else
          {
-            if (this->buffer == nullptr)
-              return;
-            wlr_buffer_drop(this->buffer);
-            /* TODO: Drop texture ?? */
+            if (this->texture)
+              wlr_texture_destroy(this->texture);
+
+            if (this->buffer)
+              wlr_buffer_drop(this->buffer);
          }
 
         this->tex = -1;

@@ -93,6 +93,9 @@ static void cairo_surface_upload_to_texture(
         memcpy(data, src, stride * buffer.height);
         wlr_buffer_end_data_ptr_access(buffer.buffer);
 
+        if (buffer.texture)
+          wlr_texture_destroy(buffer.texture);
+
         buffer.texture = wlr_texture_from_buffer(renderer, buffer.buffer);
      }
 }
