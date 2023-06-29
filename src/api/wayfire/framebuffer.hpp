@@ -25,8 +25,7 @@ struct framebuffer_base_t : public noncopyable_t
 
     /* used for pixman rendering */
     struct wlr_buffer *buffer = nullptr;
-    /* uint32_t *buffer_dest, *texture_dest; */
-    /* pixman_image_t *buffer, *texture; */
+    struct wlr_texture *texture = nullptr;
 
     framebuffer_base_t() = default;
     framebuffer_base_t(framebuffer_base_t&& other);

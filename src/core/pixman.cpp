@@ -195,6 +195,7 @@ namespace Pixman
 
    bool fb_alloc(wf::framebuffer_base_t *fb, int width, int height)
      {
+        auto renderer = wf::get_core().renderer;
         bool first_allocate = false;
         bool is_resize = false;
 
@@ -203,7 +204,6 @@ namespace Pixman
 
         if (!fb->buffer)
           {
-             auto renderer = wf::get_core().renderer;
              auto allocator = wf::get_core().allocator;
              const struct wlr_drm_format_set *formats;
              const struct wlr_drm_format *format;
@@ -231,6 +231,9 @@ namespace Pixman
 
              /* wlr_log(WLR_DEBUG, "\tAllocated new buffer %p", fb->buffer); */
           }
+
+        if (!fb->texture)
+          fb->texture = wlr_texture_from_buffer(renderer, fb->buffer);
 
         if (fb->buffer != Pixman::current_output_fb)
           {
