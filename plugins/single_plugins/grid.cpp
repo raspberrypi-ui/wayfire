@@ -108,7 +108,7 @@ class grid_crossfade_transformer : public wf::view_2D
          {
             Pixman::render_begin(fb);
             fb.logic_scissor(scissor_box);
-            Pixman::render_texture({original_buffer.tex}, fb, bbox,
+            Pixman::render_texture({original_buffer.texture}, fb, bbox,
                                    glm::vec4{1.0f, 1.0f, 1.0f, 1.0 - ra});
             Pixman::render_end();
          }
