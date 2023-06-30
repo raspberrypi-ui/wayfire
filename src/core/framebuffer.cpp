@@ -116,14 +116,10 @@ namespace wf
           {
              wlr_log(WLR_DEBUG, "Framebuffer Release: %p", this);
 
-             /* XXX: FIXME for Pixman */
-             /* if (buffer) */
-             /*   { */
-             /*      wlr_log(WLR_DEBUG, "\tDrop buffer: %p", buffer); */
-                  /* wlr_buffer_unlock(buffer); */
-               /* } */
-             /* else */
-               /* wlr_log(WLR_DEBUG, "\tNO buffer"); */
+             if (texture)
+               wlr_texture_destroy(texture);
+             if (buffer)
+               wlr_buffer_drop(buffer);
           }
 
         reset();
@@ -132,6 +128,7 @@ namespace wf
    void wf::framebuffer_base_t::reset()
      {
         wlr_log(WLR_DEBUG, "Framebuffer Reset %p", this);
+        texture = NULL;
         buffer = NULL;
 
         fb  = -1;
