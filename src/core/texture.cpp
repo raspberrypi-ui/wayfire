@@ -62,6 +62,7 @@ namespace wf
      texture_t(surface->buffer->texture)
        {
           this->surface = surface;
+          this->texture = surface->buffer->texture;
 
           if (surface->current.viewport.has_src)
             {
