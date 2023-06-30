@@ -1098,7 +1098,12 @@ bool wf::view_interface_t::render_transformed(const wf::framebuffer_t& framebuff
     } else
     {
         take_snapshot();
-        previous_texture = wf::texture_t{view_impl->offscreen_buffer.tex};
+
+        if (!runtime_config.use_pixman)
+           previous_texture = wf::texture_t{view_impl->offscreen_buffer.tex};
+        else
+           previous_texture = wf::texture_t{view_impl->offscreen_buffer.texture};
+
         texture_scale    = view_impl->offscreen_buffer.scale;
     }
 
@@ -1160,7 +1165,12 @@ bool wf::view_interface_t::render_transformed(const wf::framebuffer_t& framebuff
             wf::region_t{transformed_box}, transform->fb);
 
         previous_transform = transform;
-        previous_texture   = previous_transform->fb.tex;
+
+        if (!runtime_config.use_pixman)
+         previous_texture   = previous_transform->fb.tex;
+       else
+         previous_texture = wf::texture_t{previous_transform->fb.texture};
+
         obox = transformed_box;
     });
 
@@ -1208,12 +1218,8 @@ bool wf::view_interface_t::render_transformed(const wf::framebuffer_t& framebuff
             for (const auto& rect : damage)
               {
                  framebuffer.logic_scissor(wlr_box_from_pixman_box(rect));
-                 auto surf = get_wlr_surface();
-                 if (!surf) continue;
-                 auto texture = wlr_surface_get_texture(surf);
-                 if (!texture) continue;
-                 Pixman::render_transformed_texture(texture, src_geometry,
-                                                    {}, matrix);
+                 Pixman::render_transformed_texture(previous_texture.texture,
+                                                    src_geometry, {}, matrix);
               }
 
             Pixman::render_end();
@@ -1284,7 +1290,11 @@ void wf::view_interface_t::take_snapshot()
        if (!runtime_config.use_pixman)
          OpenGL::clear({0, 0, 0, 0});
        else
-         Pixman::clear({0, 0, 0, 0});
+         {
+            /* FIXME: Reset this back to 0, 0, 0, 0 when non-gtk app
+             * window dragging is sorted out */
+            Pixman::clear({1, 1, 0, 1});
+         }
     }
 
     if (!runtime_config.use_pixman)

@@ -185,18 +185,9 @@ void wf::view_2D::render_box(wf::texture_t src_tex, wlr_box src_box,
         wlr_log(WLR_DEBUG, "Pixman View2D render_box render_transformed_texture");
         Pixman::render_begin(fb);
         fb.logic_scissor(scissor_box);
-        auto surf = view->get_keyboard_focus_surface();
-        if (surf)
-          {
-             auto texture = wlr_surface_get_texture(surf);
-             if (texture)
-               {
-                  Pixman::render_transformed_texture(texture, quad.geometry, {},
-                                                     transform,
-                                                     {1.0f, 1.0f, 1.0f, alpha});
-               }
-          }
-
+        Pixman::render_transformed_texture(src_tex.texture, quad.geometry, {},
+                                           transform,
+                                           {1.0f, 1.0f, 1.0f, alpha});
         Pixman::render_end();
      }
 }
@@ -320,17 +311,8 @@ void wf::view_3D::render_box(wf::texture_t src_tex, wlr_box src_box,
         wlr_log(WLR_DEBUG, "Pixman View3D render_box render_transformed_texture");
         Pixman::render_begin(fb);
         fb.logic_scissor(scissor_box);
-        auto surf = view->get_keyboard_focus_surface();
-        if (surf)
-          {
-             auto texture = wlr_surface_get_texture(surf);
-             if (texture)
-               {
-                  Pixman::render_transformed_texture(texture, quad.geometry, {},
-                                                     transform, color);
-               }
-          }
-
+        Pixman::render_transformed_texture(src_tex.texture, quad.geometry, {},
+                                           transform, color);
         Pixman::render_end();
      }
 }
