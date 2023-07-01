@@ -15,11 +15,11 @@ class wayfire_autostart_static
   public:
     wayfire_autostart_static()
     {
-        if ((std::string) autostart0 != "none") wf::get_core ().run (autostart0);
-        if ((std::string) autostart1 != "none") wf::get_core ().run (autostart1);
-        if ((std::string) autostart2 != "none") wf::get_core ().run (autostart2);
-        if ((std::string) autostart3 != "none") wf::get_core ().run (autostart3);
-        if ((std::string) autostart4 != "none") wf::get_core ().run (autostart4);
+        if (!((std::string) autostart0).empty ()) wf::get_core ().run (autostart0);
+        if (!((std::string) autostart1).empty ()) wf::get_core ().run (autostart1);
+        if (!((std::string) autostart2).empty ()) wf::get_core ().run (autostart2);
+        if (!((std::string) autostart3).empty ()) wf::get_core ().run (autostart3);
+        if (!((std::string) autostart4).empty ()) wf::get_core ().run (autostart4);
     }
 };
 
