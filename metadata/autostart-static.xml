@@ -1,0 +1,28 @@
+<?xml version="1.0"?>
+<wayfire>
+	<plugin name="autostart-static">
+		<_short>Autostart Static</_short>
+		<_long>A plugin with a fixed (non-dynamic) list of autostart commands.</_long>
+		<category>General</category>
+		<option name="autostart0" type="string">
+			<_short>Autostart 0</_short>
+			<default>none</default>
+		</option>
+		<option name="autostart1" type="string">
+			<_short>Autostart 1</_short>
+			<default>none</default>
+		</option>
+		<option name="autostart2" type="string">
+			<_short>Autostart 2</_short>
+			<default>none</default>
+		</option>
+		<option name="autostart3" type="string">
+			<_short>Autostart 3</_short>
+			<default>none</default>
+		</option>
+		<option name="autostart4" type="string">
+			<_short>Autostart 4</_short>
+			<default>none</default>
+		</option>
+	</plugin>
+</wayfire>
