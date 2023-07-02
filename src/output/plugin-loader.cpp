@@ -17,6 +17,7 @@ plugin_manager::plugin_manager(wf::output_t *o)
 {
     this->output = o;
     this->plugins_opt.load_option("core/plugins");
+    this->plugins_nogl.load_option("core/plugins_nogl");
 
     reload_dynamic_plugins();
     load_static_plugins();
@@ -24,7 +25,15 @@ plugin_manager::plugin_manager(wf::output_t *o)
     this->plugins_opt.set_callback([=] ()
     {
         /* reload when config reload has finished */
-        idle_reaload_plugins.run_once([&] () {reload_dynamic_plugins(); });
+        if (!getenv ("WAYFIRE_USE_PIXMAN"))
+            idle_reaload_plugins.run_once([&] () {reload_dynamic_plugins(); });
+    });
+
+    this->plugins_nogl.set_callback([=] ()
+    {
+        /* reload when config reload has finished */
+        if (getenv ("WAYFIRE_USE_PIXMAN"))
+            idle_reaload_plugins.run_once([&] () {reload_dynamic_plugins(); });
     });
 }
 
@@ -157,7 +166,12 @@ wayfire_plugin plugin_manager::load_plugin_from_file(std::string path)
 
 void plugin_manager::reload_dynamic_plugins()
 {
-    std::string plugin_list = plugins_opt;
+    std::string plugin_list;
+    if (!getenv ("WAYFIRE_USE_PIXMAN"))
+        plugin_list = plugins_opt;
+    else
+        plugin_list = plugins_nogl;
+
     if (plugin_list == "none")
     {
         LOGE("No plugins specified in the config file, or config file is "

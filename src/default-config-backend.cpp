@@ -101,31 +101,40 @@ class dynamic_ini_config_t : public wf::config_backend_t
         LOGI("Using config file: ", config_file.c_str());
         setenv(CONFIG_FILE_ENV, config_file.c_str(), 1);
 
-        /* use a custom config file when running the wizard */
-        bool wiz = false;
-        char *user = getenv ("USER");
-        if (user && !strcmp (user, "rpi-first-boot-wizard")) wiz = true;
-
-        /* check if the config file exists - if not, copy the defaults to it */
-        if (access (config_file.c_str(), F_OK) && !access (wiz ? SYSCONFDIR "/wayfire/wizard.ini" : SYSCONFDIR "/wayfire/defaults.ini", F_OK))
+        std::string defs, tmpl;
+        if (config_file.find ("greeter") != std::string::npos)
         {
-            int fs = open (wiz ? SYSCONFDIR "/wayfire/wizard.ini" : SYSCONFDIR "/wayfire/defaults.ini", O_RDONLY);
-            if (fs >= 0)
+            defs = SYSCONFDIR "/wayfire/greeter.ini";
+            // emergency fallback in case the user greeter file has been deleted
+            if (access (config_file.c_str (), F_OK))
+                config_file = SYSCONFDIR "/wayfire/gtemplate.ini";
+        }
+        else
+        {
+            defs = SYSCONFDIR "/wayfire/defaults.ini";
+            tmpl = SYSCONFDIR "/wayfire/template.ini";
+
+            /* check if the config file exists - if not, copy the defaults to it */
+            if (access (config_file.c_str (), F_OK) && !access (tmpl.c_str (), F_OK))
             {
-                struct stat stat_buf;
-                fstat (fs, &stat_buf);
-                int fd = open (config_file.c_str(), O_WRONLY | O_CREAT, S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
-                if (fd >= 0)
+                int fs = open (tmpl.c_str (), O_RDONLY);
+                if (fs >= 0)
                 {
-                    sendfile (fd, fs, NULL, stat_buf.st_size);
-                    close (fd);
+                    struct stat stat_buf;
+                    fstat (fs, &stat_buf);
+                    int fd = open (config_file.c_str(), O_WRONLY | O_CREAT, S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
+                    if (fd >= 0)
+                    {
+                        sendfile (fd, fs, NULL, stat_buf.st_size);
+                        close (fd);
+                    }
+                    close (fs);
                 }
-                close (fs);
             }
         }
 
         config = wf::config::build_configuration(
-            get_xml_dirs(), wiz ? SYSCONFDIR "/wayfire/wizard.ini" : SYSCONFDIR "/wayfire/defaults.ini", config_file);
+            get_xml_dirs(), defs, config_file);
 
         int inotify_fd = inotify_init1(IN_CLOEXEC);
         reload_config(inotify_fd);

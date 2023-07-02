@@ -27,6 +27,7 @@ struct plugin_manager
   private:
     wf::output_t *output;
     wf::option_wrapper_t<std::string> plugins_opt;
+    wf::option_wrapper_t<std::string> plugins_nogl;
     std::unordered_map<std::string, wayfire_plugin> loaded_plugins;
 
     void deinit_plugins(bool unloadable);

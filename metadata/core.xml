@@ -9,6 +9,11 @@
 			<_long>Loads the specified plugins, space-separated list.</_long>
 			<default>alpha animate autostart command cube decoration expo fast-switcher fisheye grid idle invert move oswitch place resize switcher vswitch window-rules wobbly wrot zoom</default>
 		</option>
+		<option name="plugins_nogl" type="string">
+			<_short>Plugins which work without OpenGL</_short>
+			<_long>Loads the specified plugins, space-separated list.</_long>
+			<default>alpha animate autostart command decoration expo fast-switcher grid idle move oswitch place resize switcher vswitch window-rules wrot</default>
+		</option>
 		<option name="close_top_view" type="activator">
 			<_short>Close view</_short>
 			<_long>Closes the currently focused window with the specified key.</_long>
