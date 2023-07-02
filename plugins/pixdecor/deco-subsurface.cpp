@@ -7,6 +7,7 @@
 #include <wayfire/compositor-surface.hpp>
 #include <wayfire/output.hpp>
 #include <wayfire/opengl.hpp>
+#include <wayfire/pixman.hpp>
 #include <wayfire/core.hpp>
 #include <wayfire/decorator.hpp>
 #include <wayfire/view-transform.hpp>
@@ -14,6 +15,7 @@
 #include "deco-subsurface.hpp"
 #include "deco-layout.hpp"
 #include "deco-theme.hpp"
+#include <stdlib.h>
 
 #include <wayfire/plugins/common/cairo-util.hpp>
 
@@ -129,8 +131,17 @@ class simple_decoration_surface : public wf::surface_interface_t,
         wf::geometry_t geometry, int t_width)
     {
         update_title(geometry.width, geometry.height, t_width, fb.scale);
-        OpenGL::render_texture(title_texture.tex.tex, fb, geometry,
-            glm::vec4(1.0f), OpenGL::TEXTURE_TRANSFORM_INVERT_Y);
+       if (!getenv("WAYFIRE_USE_PIXMAN"))
+//       if (!runtime_config.use_pixman)
+         {
+            OpenGL::render_texture(title_texture.tex.tex, fb, geometry,
+                                   glm::vec4(1.0f), OpenGL::TEXTURE_TRANSFORM_INVERT_Y);
+         }
+       else
+         {
+            Pixman::render_texture(title_texture.tex.texture, fb, geometry,
+                                   glm::vec4(1.0f));
+         }
     }
 
     void render_scissor_box(const wf::framebuffer_t& fb, wf::point_t origin,
@@ -146,10 +157,20 @@ class simple_decoration_surface : public wf::surface_interface_t,
         {
             if (item->get_type() == wf::decor::DECORATION_AREA_TITLE)
             {
-                OpenGL::render_begin(fb);
+               if (!getenv("WAYFIRE_USE_PIXMAN"))
+//               if (!runtime_config.use_pixman)
+                 OpenGL::render_begin(fb);
+               else
+                 Pixman::render_begin(fb);
+
                 fb.logic_scissor(scissor);
                 render_title(fb, item->get_geometry() + origin, width);
-                OpenGL::render_end();
+
+               if (!getenv("WAYFIRE_USE_PIXMAN"))
+//               if (!runtime_config.use_pixman)
+                 OpenGL::render_end();
+               else
+                 Pixman::render_end();
             } else // button
             {
                 item->as_button().render(fb,

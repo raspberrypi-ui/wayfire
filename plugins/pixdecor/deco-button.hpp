@@ -3,6 +3,7 @@
 #include <string>
 #include <wayfire/util.hpp>
 #include <wayfire/opengl.hpp>
+#include <wayfire/pixman.hpp>
 #include <wayfire/surface.hpp>
 #include <wayfire/render-manager.hpp>
 #include <wayfire/nonstd/noncopyable.hpp>

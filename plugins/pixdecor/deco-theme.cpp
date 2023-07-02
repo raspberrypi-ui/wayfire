@@ -1,8 +1,10 @@
 #include "deco-theme.hpp"
 #include <wayfire/core.hpp>
 #include <wayfire/opengl.hpp>
+#include <wayfire/pixman.hpp>
 #include <config.h>
 #include <map>
+#include <stdlib.h>
 
 #define THEME_PATH "/usr/share/themes/PiXflat/gtk-3.0/"
 #define THEME_FILE THEME_PATH "gtk-contained.css"
@@ -120,7 +122,12 @@ void decoration_theme_t::render_background(const wf::framebuffer_t& fb,
     wf::geometry_t rectangle, const wf::geometry_t& scissor, bool active) const
 {
     wf::color_t color = active ? fg : bg;
-    OpenGL::render_begin (fb);
+   if (!getenv("WAYFIRE_USE_PIXMAN"))
+//   if (!runtime_config.use_pixman)
+     OpenGL::render_begin (fb);
+   else
+     Pixman::render_begin(fb);
+
     fb.logic_scissor (scissor);
     int border = maximized ? 0 : get_border_size ();
 
@@ -133,22 +140,38 @@ void decoration_theme_t::render_background(const wf::framebuffer_t& fb,
     rectangle.height = 1;
     rectangle.x += 2;
     rectangle.width -= 4;
-    OpenGL::render_rectangle (rectangle, color, fb.get_orthographic_projection());
+   if (!getenv("WAYFIRE_USE_PIXMAN"))
+//   if (!runtime_config.use_pixman)
+     OpenGL::render_rectangle (rectangle, color, fb.get_orthographic_projection());
+   else
+     Pixman::render_rectangle (rectangle, color, fb.get_orthographic_projection());
 
     // draw next line 1 pixel shorter at each end
     rectangle.y += 1;
     rectangle.x -= 1;
     rectangle.width += 2;
-    OpenGL::render_rectangle (rectangle, color, fb.get_orthographic_projection());
+   if (!getenv("WAYFIRE_USE_PIXMAN"))
+//   if (!runtime_config.use_pixman)
+     OpenGL::render_rectangle (rectangle, color, fb.get_orthographic_projection());
+   else
+     Pixman::render_rectangle (rectangle, color, fb.get_orthographic_projection());
 
     // draw remainder full width
     rectangle.y += 1;
     rectangle.height = get_title_height () - 2;
     rectangle.x -= 1;
     rectangle.width += 2;
-    OpenGL::render_rectangle (rectangle, color, fb.get_orthographic_projection());
-
-    OpenGL::render_end ();
+   if (!getenv("WAYFIRE_USE_PIXMAN"))
+//   if (!runtime_config.use_pixman)
+     {
+        OpenGL::render_rectangle (rectangle, color, fb.get_orthographic_projection());
+        OpenGL::render_end ();
+     }
+   else
+     {
+        Pixman::render_rectangle (rectangle, color, fb.get_orthographic_projection());
+        Pixman::render_end ();
+     }
 }
 
 /**
