@@ -60,6 +60,7 @@ decoration_layout_t::decoration_layout_t(const decoration_theme_t& th,
     button_height(th.get_font_height_px () >= LARGE_ICON_THRESHOLD ? 26 : 18),
     button_padding((titlebar_size - button_height) / 2),
     theme(th),
+    dec(th.get_decorated ()),
     damage_callback(callback)
 {}
 
@@ -237,7 +238,7 @@ decoration_layout_t::action_response_t decoration_layout_t::handle_motion(
     }
 
     this->current_input = {x, y};
-    update_cursor();
+    if (dec) update_cursor();
 
     return {DECORATION_ACTION_NONE, 0};
 }

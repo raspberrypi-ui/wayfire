@@ -19,7 +19,7 @@ class decoration_theme_t
 {
   public:
     /** Create a new theme with the default parameters */
-    decoration_theme_t();
+    decoration_theme_t(bool state);
 
     /** @return The height of the system font in pixels */
     int get_font_height_px() const;
@@ -27,6 +27,8 @@ class decoration_theme_t
     int get_title_height() const;
     /** @return The available border for resizing */
     int get_border_size() const;
+
+    bool get_decorated () const;
 
     /**
      * Fill the given rectangle with the background color(s).
@@ -78,6 +80,7 @@ class decoration_theme_t
 	wf::color_t fg_text;
 	wf::color_t bg_text;
 	bool maximized;
+    bool dec;
 };
 }
 }

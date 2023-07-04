@@ -66,8 +66,8 @@ class simple_decoration_surface : public wf::surface_interface_t,
     wf::region_t cached_region;
 
   public:
-    simple_decoration_surface(wayfire_view view) :
-        theme{},
+    simple_decoration_surface(wayfire_view view, bool decorate) :
+        theme{decorate},
         layout{theme, [=] (wlr_box box) {this->damage_surface_box(box); }}
     {
         this->view = view;
@@ -369,9 +369,9 @@ class simple_decoration_surface : public wf::surface_interface_t,
     }
 };
 
-void init_view(wayfire_view view)
+void init_view(wayfire_view view, bool decorate)
 {
-    auto surf = std::make_unique<simple_decoration_surface>(view);
+    auto surf = std::make_unique<simple_decoration_surface>(view, decorate);
     auto ptr  = surf.get();
 
     view->add_subsurface(std::move(surf), true);

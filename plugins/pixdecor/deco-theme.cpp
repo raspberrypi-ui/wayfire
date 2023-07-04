@@ -42,7 +42,7 @@ namespace wf
 namespace decor
 {
 /** Create a new theme with the default parameters */
-decoration_theme_t::decoration_theme_t()
+decoration_theme_t::decoration_theme_t(bool state)
 {
     float r, g, b;
     gs = g_settings_new ("org.gnome.desktop.interface");
@@ -71,6 +71,8 @@ decoration_theme_t::decoration_theme_t()
     else bg_text = {1.0, 1.0, 1.0, 1.0};
 
     g_free (userconf);
+
+    dec = state;
 }
 
 /** @return The available height for displaying the title */
@@ -91,6 +93,7 @@ int decoration_theme_t::get_font_height_px() const
 
 int decoration_theme_t::get_title_height() const
 {
+    if (!dec) return 0;
     int height = get_font_height_px ();
     height *= 3;
     height /= 2;
@@ -108,6 +111,11 @@ int decoration_theme_t::get_border_size() const
 void decoration_theme_t::set_maximize (bool state)
 {
     maximized = state;
+}
+
+bool decoration_theme_t::get_decorated () const
+{
+    return dec;
 }
 
 /**

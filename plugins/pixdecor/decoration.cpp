@@ -67,11 +67,11 @@ class wayfire_pixdecor :
     wf::wl_idle_call idle_deactivate;
     void update_view_decoration(wayfire_view view)
     {
-        if (always_decorate_view (view) || (view->should_be_decorated() && !ignore_decoration_of_view(view)))
+        if (always_decorate_view (view) || view->should_be_decorated())
         {
             if (output->activate_plugin(grab_interface))
             {
-                init_view(view);
+                init_view(view, (view->should_be_decorated() && !ignore_decoration_of_view(view)));
                 idle_deactivate.run_once([this] ()
                 {
                     output->deactivate_plugin(grab_interface);

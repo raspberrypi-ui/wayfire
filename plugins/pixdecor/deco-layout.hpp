@@ -147,6 +147,7 @@ class decoration_layout_t
     const int button_padding;
     const decoration_theme_t& theme;
     bool maximized;
+    bool dec;
 
     std::function<void(wlr_box)> damage_callback;
 
