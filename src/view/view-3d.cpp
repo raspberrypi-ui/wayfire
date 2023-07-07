@@ -202,7 +202,7 @@ void wf::view_2D::render_box(wf::texture_t src_tex, wlr_box src_box,
 				1.0f * fb.geometry.y + 1.0f * fb.geometry.height,
 				1.0f * fb.geometry.y);
 
-	auto transform = fb.transform * ortho * scale * translate * rotate;
+	auto transform = fb.transform * ortho * scale * translate /* * rotate*/;
 
 	float mat[9];
 	glm::mat3 m = glm::mat3(transform);
@@ -231,7 +231,8 @@ void wf::view_2D::render_box(wf::texture_t src_tex, wlr_box src_box,
         fb.logic_scissor(scissor_box);
         Pixman::render_transformed_texture(src_tex.texture, gg, {},
                                            mat,
-                                           {1.0f, 1.0f, 1.0f, alpha});
+                                           {1.0f, 1.0f, 1.0f, alpha},
+					   angle);
         Pixman::render_end();
      }
 
