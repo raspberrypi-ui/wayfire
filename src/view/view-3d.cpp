@@ -10,6 +10,7 @@
 #include "../main.hpp"
 
 #include <glm/gtc/matrix_transform.hpp>
+#include <glm/gtc/type_ptr.hpp>
 
 #define PI 3.14159265359
 
@@ -154,42 +155,147 @@ wf::pointf_t wf::view_2D::untransform_point(
 void wf::view_2D::render_box(wf::texture_t src_tex, wlr_box src_box,
     wlr_box scissor_box, const wf::framebuffer_t& fb)
 {
-    auto wm_geom = view->transform_region(view->get_wm_geometry(), this);
-    auto quad    = center_geometry(fb.geometry, src_box, get_center(wm_geom));
-
-    quad.geometry.x1 *= scale_x;
-    quad.geometry.x2 *= scale_x;
-    quad.geometry.y1 *= scale_y;
-    quad.geometry.y2 *= scale_y;
-
-    auto rotate    = glm::rotate(glm::mat4(1.0), angle, {0, 0, 1});
-    auto translate = glm::translate(glm::mat4(1.0),
-    {quad.off_x + translation_x,
-        quad.off_y - translation_y, 0});
-
-    auto ortho = glm::ortho(-fb.geometry.width / 2.0f, fb.geometry.width / 2.0f,
-        -fb.geometry.height / 2.0f, fb.geometry.height / 2.0f);
-
-    auto transform = fb.transform * ortho * translate * rotate;
+  auto rotate    = glm::rotate(glm::mat4(1.0), angle, {0, 0, 1});
 
     if (!runtime_config.use_pixman)
-     {
-        OpenGL::render_begin(fb);
-        fb.logic_scissor(scissor_box);
-        OpenGL::render_transformed_texture(src_tex, quad.geometry, {},
-                                           transform, {1.0f, 1.0f, 1.0f, alpha});
-        OpenGL::render_end();
-     }
-   else
-     {
+      {
+	auto wm_geom = view->transform_region(view->get_wm_geometry(), this);
+	auto quad    = center_geometry(fb.geometry, src_box, get_center(wm_geom));
+
+	quad.geometry.x1 *= scale_x;
+	quad.geometry.x2 *= scale_x;
+	quad.geometry.y1 *= scale_y;
+	quad.geometry.y2 *= scale_y;
+
+	auto translate = glm::translate(glm::mat4(1.0),
+					{quad.off_x + translation_x,
+					 quad.off_y - translation_y, 0});
+
+	auto ortho = glm::ortho(-fb.geometry.width / 2.0f, fb.geometry.width / 2.0f,
+				-fb.geometry.height / 2.0f, fb.geometry.height / 2.0f);
+
+	auto transform = fb.transform * ortho * translate * rotate;
+
+	OpenGL::render_begin(fb);
+	fb.logic_scissor(scissor_box);
+	OpenGL::render_transformed_texture(src_tex, quad.geometry, {},
+					   transform, {1.0f, 1.0f, 1.0f, alpha});
+	OpenGL::render_end();
+      }
+    else
+      {
         wlr_log(WLR_DEBUG, "Pixman View2D render_box render_transformed_texture");
+	gl_geometry gg = {
+	        .x1 = (float)src_box.x,
+		.y1 = (float)src_box.y,
+		.x2 = (float)src_box.x + (float)src_box.width,
+		.y2 = (float)src_box.y + (float)src_box.height,
+	};
+	
+	auto translate = glm::translate(glm::mat4(1.0),
+					{translation_x, translation_y, 0});
+
+	auto scale = glm::scale(glm::mat4(1.0), {scale_x, scale_y, 1.0});
+
+	auto ortho = glm::ortho(1.0f * fb.geometry.x,
+				1.0f * fb.geometry.x + 1.0f * fb.geometry.width,
+				1.0f * fb.geometry.y + 1.0f * fb.geometry.height,
+				1.0f * fb.geometry.y);
+
+	auto transform = fb.transform * ortho * scale * translate * rotate;
+
+	float mat[9];
+	glm::mat3 m = glm::mat3(transform);
+	float *fm = glm::value_ptr(m);
+
+	float transx = fb.geometry.width/2.0f;
+	float transy = fb.geometry.height/2.0f;
+
+	float sx = fb.geometry.width/2.0f;
+	float sy = -fb.geometry.height/2.0f;
+
+	wlr_matrix_translate(fm, transx, transy);
+	wlr_matrix_scale(fm, sx, sy);
+
+	float extrax = -fb.geometry.x;
+	float extray = -fb.geometry.y;
+	wlr_matrix_translate(fm, extrax, extray);
+
+	fm[8]=1;
+	memcpy(mat, fm, 9*sizeof(float));
+
+	// wlr_matrix_project_box(mat, &src_box, WL_OUTPUT_TRANSFORM_NORMAL, angle,
+	// 		       fm);
+
         Pixman::render_begin(fb);
         fb.logic_scissor(scissor_box);
-        Pixman::render_transformed_texture(src_tex.texture, quad.geometry, {},
-                                           transform,
+        Pixman::render_transformed_texture(src_tex.texture, gg, {},
+                                           mat,
                                            {1.0f, 1.0f, 1.0f, alpha});
         Pixman::render_end();
      }
+
+    // auto wm_geom = view->transform_region(view->get_wm_geometry(), this);
+    // auto quad    = center_geometry(fb.geometry, src_box, get_center(wm_geom));
+
+    // quad.geometry.x1 *= scale_x;
+    // quad.geometry.x2 *= scale_x;
+    // quad.geometry.y1 *= scale_y;
+    // quad.geometry.y2 *= scale_y;
+
+    // auto translate = glm::translate(glm::mat4(1.0),
+    // 				    {quad.off_x + translation_x,
+    // 				     quad.off_y - translation_y, 0});
+
+    // auto ortho = glm::ortho(-fb.geometry.width / 2.0f, fb.geometry.width / 2.0f,
+    // 			    -fb.geometry.height / 2.0f, fb.geometry.height / 2.0f);
+
+    // auto transform = fb.transform * ortho * translate * rotate;
+
+    // if (!runtime_config.use_pixman)
+    //   {
+
+    // 	OpenGL::render_begin(fb);
+    // 	fb.logic_scissor(scissor_box);
+    // 	OpenGL::render_transformed_texture(src_tex, quad.geometry, {},
+    // 					   transform, {1.0f, 1.0f, 1.0f, alpha});
+    // 	OpenGL::render_end();
+    //   }
+    // else
+    //   {
+    //     wlr_log(WLR_DEBUG, "Pixman View2D render_box render_transformed_texture");
+    // 	// gl_geometry gg = {
+    // 	//         .x1 = (float)src_box.x,y
+    // 	// 	.y1 = (float)src_box.y,
+    // 	// 	.x2 = (float)src_box.x + (float)src_box.width,
+    // 	// 	.y2 = (float)src_box.y + (float)src_box.height,
+    // 	// };
+	
+    // 	// auto translate = glm::translate(glm::mat4(1.0),
+    // 	// 				{translation_x, translation_y, 0});
+
+    // 	// auto scale = glm::scale(glm::mat4(1.0), {scale_x, scale_y, 1.0});
+
+    // 	// auto ortho = glm::ortho(0.0f, 1.0f*fb.geometry.width, 1.0f*fb.geometry.height, 0.0f);
+
+    // 	// auto transform = fb.transform * ortho * scale * translate * rotate;
+
+    // 	float mat[9];
+    // 	glm::mat3 m = glm::mat3(transform);
+    // 	float *fm = glm::value_ptr(m);
+
+    // 	wlr_matrix_translate(fm, fb.geometry.width/2.0, fb.geometry.height/2.0);
+    // 	wlr_matrix_scale(fm, fb.geometry.width/2.0, 0.0 - fb.geometry.height/2.0);
+    // 	fm[8]=1;
+    // 	memcpy(mat, fm, 9*sizeof(float));
+
+    //     Pixman::render_begin(fb);
+    //     fb.logic_scissor(scissor_box);
+    //     Pixman::render_transformed_texture(src_tex.texture, quad.geometry, {},
+    //                                        mat,
+    //                                        {1.0f, 1.0f, 1.0f, alpha});
+    //     Pixman::render_end();
+    //  }
 }
 
 const float wf::view_3D::fov = PI / 4;
@@ -311,8 +417,10 @@ void wf::view_3D::render_box(wf::texture_t src_tex, wlr_box src_box,
         wlr_log(WLR_DEBUG, "Pixman View3D render_box render_transformed_texture");
         Pixman::render_begin(fb);
         fb.logic_scissor(scissor_box);
+	/* FIXME */
+	float matrix[9] = { 1, 0, 0, 0, 1, 0, 0, 0, 1 };
         Pixman::render_transformed_texture(src_tex.texture, quad.geometry, {},
-                                           transform, color);
+                                           matrix, color);
         Pixman::render_end();
      }
 }
