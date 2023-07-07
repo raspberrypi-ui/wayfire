@@ -1208,7 +1208,8 @@ bool wf::view_interface_t::render_transformed(const wf::framebuffer_t& framebuff
             wlr_log(WLR_DEBUG, "Pixman view_interface render_transformed");
 
             Pixman::render_begin(framebuffer);
-            auto matrix = framebuffer.get_orthographic_projection();
+	    float matrix[9];
+            framebuffer.get_orthographic_projection(matrix);
             gl_geometry src_geometry = {
                1.0f * obox.x, 1.0f * obox.y,
                1.0f * obox.x + 1.0f * obox.width,

@@ -8,6 +8,7 @@
 #include "config.h"
 #include <wayfire/nonstd/wlroots-full.hpp>
 #include <glm/gtc/matrix_transform.hpp>
+#include <glm/gtc/type_ptr.hpp>
 #include "../main.hpp"
 
 namespace wf
@@ -178,6 +179,18 @@ namespace wf
                                 1.0f * geometry.y);
 
         return this->transform * ortho;
+     }
+
+   void wf::framebuffer_t::get_orthographic_projection(float mat[9]) const
+     {
+       auto projection = get_orthographic_projection();
+       glm::mat3 m = glm::mat3(projection);
+       float *fm = glm::value_ptr(m);
+
+       // wlr_matrix_translate(fm, (geometry.x + geometry.width)/2.0, (geometry.y + geometry.height)/2.0);
+       wlr_matrix_scale(fm, (geometry.width - geometry.x)/2.0, -(geometry.height - geometry.y)/2.0);
+       fm[8]=1;
+       memcpy(mat, fm, 9*sizeof(float));
      }
 
    void wf::framebuffer_t::logic_scissor(wlr_box box) const

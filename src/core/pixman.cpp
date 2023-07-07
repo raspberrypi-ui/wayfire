@@ -8,6 +8,7 @@
 #include <sys/mman.h>
 #include <drm_fourcc.h>
 #include <wlr/types/wlr_matrix.h>
+#include <glm/gtc/type_ptr.hpp>
 
 namespace Pixman
 {
@@ -100,16 +101,19 @@ namespace Pixman
         /* wlr_log(WLR_DEBUG, "\tGeometry: %d %d %d %d", */
         /*         geometry.x, geometry.y, geometry.width, geometry.height); */
 
-        if (tex.texture)
+       float mat[9];
+       framebuffer.get_orthographic_projection(mat);
+
+       if (tex.texture)
           render_transformed_texture(tex.texture, geometry,
-                                     framebuffer.get_orthographic_projection(),
+				     mat,
                                      color);
         else if (tex.surface)
           {
              auto texture = wlr_surface_get_texture(tex.surface);
              if (texture)
                render_transformed_texture(texture, geometry,
-                                          framebuffer.get_orthographic_projection(),
+                                          mat,
                                           color);
           }
      }
@@ -118,12 +122,15 @@ namespace Pixman
      {
         /* wlr_log(WLR_DEBUG, "Pixman Render Texture %p Framebuffer", texture); */
 
-        render_transformed_texture(texture, geometry,
-                                   framebuffer.get_orthographic_projection(),
-                                   color);
+       float mat[9];
+       framebuffer.get_orthographic_projection(mat);
+
+       render_transformed_texture(texture, geometry,
+				  mat,
+				  color);
      }
 
-   void render_transformed_texture(struct wlr_texture *tex, const gl_geometry& g, const gl_geometry& texg, glm::mat4 transform, glm::vec4 color)
+   void render_transformed_texture(struct wlr_texture *tex, const gl_geometry& g, const gl_geometry& texg, float transform[9], glm::vec4 color)
      {
         float mat[9];
 
@@ -134,21 +141,33 @@ namespace Pixman
 
         if (!tex) return;
         auto renderer = wf::get_core().renderer;
-        auto output = wf::get_core().get_active_output();
+        // auto output = wf::get_core().get_active_output();
         const struct wlr_box wbox =
           {
              .x = (int)g.x1,
              .y = (int)g.y1,
-             .width = (int)g.x2,
-             .height = (int)g.y2,
+             .width = (int)g.x2 - (int)g.x1,
+             .height = (int)g.y2 -(int)g.y1,
           };
 
+	// glm::mat3 m = glm::mat3(transform);
+	// float *fm = glm::value_ptr(m);
+
+	// wlr_matrix_translate(fm, 1280/2.0, 720/2.0);
+	// wlr_matrix_scale(fm, 1280/2.0, 0-720/2.0);
+	// fm[8]=1;
+
+        // wlr_matrix_project_box(mat, &wbox, WL_OUTPUT_TRANSFORM_NORMAL, 0,
+        //                        output->handle->transform_matrix);
+        // wlr_matrix_project_box(mat, &wbox, WL_OUTPUT_TRANSFORM_NORMAL, 0,
+        //                        fm);
         wlr_matrix_project_box(mat, &wbox, WL_OUTPUT_TRANSFORM_NORMAL, 0,
-                               output->handle->transform_matrix);
+                               transform);
         wlr_render_texture_with_matrix(renderer, tex, mat, (float)color.a);
+        // wlr_render_texture_with_matrix(renderer, tex, transform, (float)color.a);
      }
 
-   void render_transformed_texture(struct wlr_texture *tex, const wf::geometry_t& geometry, glm::mat4 transform, glm::vec4 color)
+   void render_transformed_texture(struct wlr_texture *tex, const wf::geometry_t& geometry, float transform[9], glm::vec4 color)
      {
         /* wlr_log(WLR_DEBUG, "Pixman Render Transformed Texture %p with wf::geometry_t", */
         /*         tex); */
@@ -168,8 +187,8 @@ namespace Pixman
 
         gg.x1 = geometry.x;
         gg.y1 = geometry.y;
-        gg.x2 = geometry.width;
-        gg.y2 = geometry.height;
+        gg.x2 = geometry.x + geometry.width;
+        gg.y2 = geometry.y + geometry.height;
 
         render_transformed_texture(tex, gg, {}, transform, color);
      }

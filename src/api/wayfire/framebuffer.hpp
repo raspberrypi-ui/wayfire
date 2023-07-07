@@ -92,6 +92,8 @@ struct framebuffer_t : public framebuffer_base_t
      * coordinates to the framebuffer coordinates. */
     glm::mat4 get_orthographic_projection() const;
 
+    void get_orthographic_projection(float mat[9]) const;
+
     /**
      * Set the scissor region to the given box.
      *
