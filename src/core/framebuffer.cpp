@@ -38,6 +38,7 @@ namespace wf
         this->viewport_height = other.viewport_height;
 
         this->buffer = other.buffer;
+        this->texture = other.texture;
 
         this->fb  = other.fb;
         this->tex = other.tex;
