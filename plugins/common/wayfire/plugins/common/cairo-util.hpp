@@ -52,6 +52,17 @@ static void cairo_surface_upload_to_texture(
         size_t stride;
         auto renderer = wf::get_core().renderer;
 
+        if (buffer.buffer)
+          {
+             wlr_buffer_drop(buffer.buffer);
+             buffer.buffer = nullptr;
+          }
+        if (buffer.texture)
+          {
+             wlr_texture_destroy(buffer.texture);
+             buffer.texture = nullptr;
+          }
+
         if (!buffer.buffer)
           {
              auto allocator = wf::get_core().allocator;
@@ -92,9 +103,6 @@ static void cairo_surface_upload_to_texture(
 
         memcpy(data, src, stride * buffer.height);
         wlr_buffer_end_data_ptr_access(buffer.buffer);
-
-        if (buffer.texture)
-          wlr_texture_destroy(buffer.texture);
 
         buffer.texture = wlr_texture_from_buffer(renderer, buffer.buffer);
      }
@@ -283,15 +291,27 @@ struct cairo_text_t
         wf::cairo_text_t ct;
         /* note: we "borrow" the texture from what was supplied (if any) */
         ct.tex.tex = tex.tex;
+        ct.tex.texture = tex.texture;
+        ct.tex.buffer = tex.buffer;
         auto ret = ct.render_text(text, par);
         if (tex.tex == (GLuint) - 1)
         {
             tex.tex = ct.tex.tex;
         }
+        if (tex.texture == nullptr)
+         {
+            tex.texture = ct.tex.texture;
+         }
+        if (tex.buffer == nullptr)
+         {
+            tex.buffer = ct.tex.buffer;
+         }
 
         tex.width  = ct.tex.width;
         tex.height = ct.tex.height;
         ct.tex.tex = -1;
+        ct.tex.texture = nullptr;
+        ct.tex.buffer = nullptr;
         return ret;
     }
 
