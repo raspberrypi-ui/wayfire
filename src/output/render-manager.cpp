@@ -1205,8 +1205,11 @@ class wf::render_manager::impl
             return;
         }
 
-        /* XXX: Update output layers */
-        update_output_layers();
+        if (!runtime_config.use_pixman)
+        {
+            /* XXX: Update output layers */
+            update_output_layers();
+        }
 
         // Accumulate damage now, when we are sure we will render the frame.
         // Doing this earlier may mean that the damage from the previous frames

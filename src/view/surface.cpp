@@ -62,8 +62,11 @@ void wf::surface_interface_t::remove_subsurface(
 
 wf::surface_interface_t::~surface_interface_t()
 {
-    /* remove wlr_output_layer from previous output */
-    destroy_output_layer();
+   if (!runtime_config.use_pixman)
+     {
+        /* remove wlr_output_layer from previous output */
+        destroy_output_layer();
+     }
 }
 
 wf::surface_interface_t*wf::surface_interface_t::get_main_surface()
@@ -120,10 +123,13 @@ wf::output_t*wf::surface_interface_t::get_output()
 
 void wf::surface_interface_t::set_output(wf::output_t *output)
 {
-   if ((priv->output) && (priv->output != output))
+    if (!runtime_config.use_pixman)
      {
-        /* remove wlr_output_layer from previous output */
-        destroy_output_layer();
+        if ((priv->output) && (priv->output != output))
+          {
+             /* remove wlr_output_layer from previous output */
+             destroy_output_layer();
+          }
      }
 
     priv->output = output;
@@ -131,7 +137,8 @@ void wf::surface_interface_t::set_output(wf::output_t *output)
     /* create new wlr_output_layer */
    /* FIXME: This should only be called for the Main surface,
     * not any subsurfaces (i think) */
-    create_output_layer(priv->output);
+    if (!runtime_config.use_pixman)
+      create_output_layer(priv->output);
 
     for (auto& c : priv->surface_children_above)
     {
