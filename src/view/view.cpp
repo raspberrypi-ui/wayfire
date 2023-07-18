@@ -1291,11 +1291,7 @@ void wf::view_interface_t::take_snapshot()
        if (!runtime_config.use_pixman)
          OpenGL::clear({0, 0, 0, 0});
        else
-         {
-            /* FIXME: Reset this back to 0, 0, 0, 0 when non-gtk app
-             * window dragging is sorted out */
-            Pixman::clear({1, 1, 0, 1});
-         }
+         Pixman::clear({0, 0, 0, 0});
     }
 
     if (!runtime_config.use_pixman)
