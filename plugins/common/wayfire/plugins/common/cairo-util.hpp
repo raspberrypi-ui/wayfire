@@ -22,8 +22,8 @@ struct simple_texture_t;
 static void cairo_surface_upload_to_texture(
     cairo_surface_t *surface, wf::simple_texture_t& buffer)
 {
-    buffer.width  = cairo_image_surface_get_width(surface);
-    buffer.height = cairo_image_surface_get_height(surface);
+    int width  = cairo_image_surface_get_width(surface);
+    int height = cairo_image_surface_get_height(surface);
 
     auto src = cairo_image_surface_get_data(surface);
 
@@ -43,7 +43,7 @@ static void cairo_surface_upload_to_texture(
         GL_CALL(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_R, GL_BLUE));
         GL_CALL(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_B, GL_RED));
         GL_CALL(glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA,
-                             buffer.width, buffer.height, 0, GL_RGBA, GL_UNSIGNED_BYTE, src));
+                             width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, src));
      }
    else
      {
@@ -54,9 +54,13 @@ static void cairo_surface_upload_to_texture(
 
         if (buffer.buffer)
           {
-             wlr_buffer_drop(buffer.buffer);
-             buffer.buffer = nullptr;
+             if ((buffer.width != width) || (buffer.height != height))
+               {
+                  wlr_buffer_drop(buffer.buffer);
+                  buffer.buffer = nullptr;
+               }
           }
+
         if (buffer.texture)
           {
              wlr_texture_destroy(buffer.texture);
@@ -83,8 +87,8 @@ static void cairo_surface_upload_to_texture(
                }
 
              buffer.buffer =
-               wlr_allocator_create_buffer(allocator, buffer.width,
-                                           buffer.height, dformat);
+               wlr_allocator_create_buffer(allocator, width,
+                                           height, dformat);
              if (!buffer.buffer)
                {
                   wlr_log(WLR_DEBUG, "Cannot create texture buffer");
@@ -101,11 +105,14 @@ static void cairo_surface_upload_to_texture(
              return;
           }
 
-        memcpy(data, src, stride * buffer.height);
+        memcpy(data, src, stride * height);
         wlr_buffer_end_data_ptr_access(buffer.buffer);
 
         buffer.texture = wlr_texture_from_buffer(renderer, buffer.buffer);
      }
+
+   buffer.width = width;
+   buffer.height = height;
 }
 
 namespace wf
