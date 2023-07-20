@@ -265,4 +265,40 @@ namespace Pixman
 
         return is_resize || first_allocate;
      }
+
+   void fb_blit(const wf::framebuffer_base_t& src, const wf::framebuffer_base_t& dst, int sx, int sy, int sw, int sh, int dx, int dy, int dw, int dh)
+     {
+        void *sdata, *ddata;
+        uint32_t sformat, dformat;
+        size_t sstride, dstride;
+        auto renderer = wf::get_core().renderer;
+
+        wlr_log(WLR_DEBUG, "Pixman FB Blit");
+        wlr_log(WLR_DEBUG, "\tSrc Buffer: %p", src.buffer);
+        wlr_log(WLR_DEBUG, "\tSrc: %d %d %d %d", sx, sy, sw, sh);
+        wlr_log(WLR_DEBUG, "\tDest Buffer: %p", dst.buffer);
+        wlr_log(WLR_DEBUG, "\tDest: %d %d %d %d", dx, dy, dw, dh);
+
+        if (!wlr_buffer_begin_data_ptr_access(dst.buffer,
+                                              WLR_BUFFER_DATA_PTR_ACCESS_WRITE,
+                                              &ddata, &dformat, &dstride))
+          {
+             wlr_log(WLR_ERROR, "\tCannot access destination buffer data ptr");
+             return;
+          }
+
+        if (!wlr_renderer_begin_with_buffer(renderer, src.buffer))
+          {
+             wlr_log(WLR_ERROR, "\tCannot begin with src buffer");
+             wlr_buffer_end_data_ptr_access(dst.buffer);
+             return;
+          }
+
+        bool ok = false;
+        ok = wlr_renderer_read_pixels(renderer, dformat, dstride, dw, dh,
+                                      sx, sy, dx, dy, ddata);
+        wlr_renderer_end(renderer);
+
+        wlr_buffer_end_data_ptr_access(dst.buffer);
+     }
 }
