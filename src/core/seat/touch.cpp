@@ -67,11 +67,10 @@ wf::touch_interface_t::touch_interface_t(wlr_cursor *cursor, wlr_seat *seat,
 
     on_cancel.set_callback([=] (void *data)
     {
-        wlr_event_touch_cancel *ev = (wlr_event_touch_cancel*)data;
-        wlr_event_touch_up sim;
+        wlr_touch_cancel_event *ev = (wlr_touch_cancel_event*)data;
+        wlr_touch_up_event sim;
         sim.time_msec = ev->time_msec;
         sim.touch_id  = ev->touch_id;
-        sim.device    = ev->device;
         this->on_up.emit(&sim);
     });
 
