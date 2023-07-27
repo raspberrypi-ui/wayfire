@@ -99,7 +99,16 @@ namespace Pixman
           };
 
         float mat[9];
-        wlr_matrix_identity(mat);
+        mat[0] = matrix[0][0];
+        mat[1] = matrix[1][0];
+        mat[2] = matrix[3][0];
+        mat[3] = matrix[0][1];
+        mat[4] = matrix[1][1];
+        mat[5] = matrix[3][1];
+        mat[6] = matrix[0][2];
+        mat[7] = matrix[1][2];
+        mat[8] = 1.0f;
+
         wlr_render_rect(renderer, &wbox, c, mat);
      }
 

@@ -174,10 +174,17 @@ namespace wf
 
    glm::mat4 wf::framebuffer_t::get_orthographic_projection() const
      {
-        auto ortho = glm::ortho(1.0f * geometry.x,
+        glm::mat4 ortho;
+        if (!runtime_config.use_pixman)
+            ortho = glm::ortho(1.0f * geometry.x,
                                 1.0f * geometry.x + 1.0f * geometry.width,
                                 1.0f * geometry.y + 1.0f * geometry.height,
                                 1.0f * geometry.y);
+        else
+            ortho = glm::translate(glm::mat4(1.0f), glm::vec3(
+                                   -geometry.x,
+                                   -geometry.y,
+                                   1));
 
         return this->transform * ortho;
      }
@@ -185,13 +192,15 @@ namespace wf
    void wf::framebuffer_t::get_orthographic_projection(float mat[9]) const
      {
        auto projection = get_orthographic_projection();
-       glm::mat3 m = glm::mat3(projection);
-       float *fm = glm::value_ptr(m);
-
-       // wlr_matrix_translate(fm, (geometry.x + geometry.width)/2.0, (geometry.y + geometry.height)/2.0);
-       wlr_matrix_scale(fm, (geometry.width - geometry.x)/2.0, -(geometry.height - geometry.y)/2.0);
-       fm[8]=1;
-       memcpy(mat, fm, 9*sizeof(float));
+       mat[0] = projection[0][0];
+       mat[1] = projection[1][0];
+       mat[2] = projection[3][0];
+       mat[3] = projection[0][1];
+       mat[4] = projection[1][1];
+       mat[5] = projection[3][1];
+       mat[6] = projection[0][2];
+       mat[7] = projection[1][2];
+       mat[8] = 1.0f;
      }
 
    void wf::framebuffer_t::logic_scissor(wlr_box box) const
