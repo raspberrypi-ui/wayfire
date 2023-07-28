@@ -69,6 +69,14 @@ namespace Pixman
         wlr_renderer_begin(renderer, width, height);
      }
 
+   void render_begin(struct wlr_buffer *buffer)
+     {
+        wlr_log(WLR_DEBUG, "Pixman Render Begin With wlr_buffer %p",
+                buffer);
+        auto renderer = wf::get_core().renderer;
+        wlr_renderer_begin_with_buffer(renderer, buffer);
+     }
+
    void render_rectangle(wf::geometry_t box, wf::color_t color, glm::mat4 matrix)
      {
         /* wlr_log(WLR_DEBUG, "Pixman Render Rectangle"); */

@@ -898,8 +898,6 @@ class wf::render_manager::impl
 
     /* Actual rendering functions */
 
-/* XXX: TODO: Add a bind_output for Pixman */
-
     /**
      * Bind the output's EGL surface, allocate buffers
      */
@@ -942,8 +940,7 @@ class wf::render_manager::impl
             }
             else
             {
-                Pixman::render_begin(output->handle->width, output->handle->height,
-                    postprocessing->output_fb);
+                Pixman::render_begin(postprocessing->output_buffer);
                 Pixman::clear({1, 1, 0, 1});
                 Pixman::render_end();
             }
@@ -1243,8 +1240,7 @@ class wf::render_manager::impl
             }
             else
             {
-                Pixman::render_begin(output->handle->width, output->handle->height,
-                    postprocessing->output_fb);
+                Pixman::render_begin(postprocessing->output_buffer);
                 Pixman::clear({0, 0, 0, 1});
                 Pixman::render_end();
             }
