@@ -36,7 +36,7 @@ namespace Pixman
 
    void unbind_output()
      {
-        wlr_log(WLR_DEBUG, "Pixman Render Unbind Output");
+        wlr_log(WLR_DEBUG, "Pixman Render Unbind Output %p", current_output_fb);
         current_output_fb = NULL;
      }
 

@@ -284,11 +284,13 @@ struct postprocessing_manager_t
     {
         /* Sometimes, the framebuffer by OpenGL is Y-inverted.
          * This is the case only if the target framebuffer is not 0 */
-       /* FIXME */
-        if (output_fb == 0)
-        {
+
+       if (runtime_config.use_pixman) return;
+
+       if (output_fb == 0)
+         {
             return;
-        }
+         }
 
         fb.wl_transform = wlr_output_transform_compose(
             (wl_output_transform)fb.wl_transform, WL_OUTPUT_TRANSFORM_FLIPPED_180);
@@ -348,6 +350,7 @@ struct postprocessing_manager_t
         default_framebuffer.buffer = output_buffer;
         default_framebuffer.fb  = output_fb;
         default_framebuffer.tex = 0;
+        default_framebuffer.texture = NULL;
 
         int last_buffer_idx = default_out_buffer;
         int next_buffer_idx = 1;
@@ -388,11 +391,13 @@ struct postprocessing_manager_t
             fb.fb  = post_buffers[default_out_buffer].fb;
             fb.tex = post_buffers[default_out_buffer].tex;
             fb.buffer = post_buffers[default_out_buffer].buffer;
+            fb.texture = post_buffers[default_out_buffer].texture;
         } else
         {
             fb.fb  = output_fb;
             fb.tex = 0;
             fb.buffer = output_buffer;
+            fb.texture = NULL;
         }
 
         workaround_wlroots_backend_y_invert(fb);
@@ -428,28 +433,17 @@ class depth_buffer_manager_t : public noncopyable_t
         attach_buffer(find_buffer(fb), fb, width, height);
     }
 
-    void ensure_depth_buffer(struct wlr_buffer *fb, int width, int height)
-    {
-        /* If the backend doesn't have its own framebuffer, then the
-         * framebuffer is created with a depth buffer. */
-        if (!fb)
-        {
-            return;
-        }
-
-        attach_buffer(find_buffer(fb), fb, width, height);
-    }
-
     ~depth_buffer_manager_t()
     {
-        if (runtime_config.use_pixman) return;
-        /* XXX: TODO: Implement Texture Delete for Pixman */
-        OpenGL::render_begin();
-        for (auto& buffer : buffers)
-        {
-            GL_CALL(glDeleteTextures(1, &buffer.tex));
-        }
-        OpenGL::render_end();
+       if (!runtime_config.use_pixman)
+         {
+            OpenGL::render_begin();
+            for (auto& buffer : buffers)
+              {
+                 GL_CALL(glDeleteTextures(1, &buffer.tex));
+              }
+            OpenGL::render_end();
+         }
     }
 
   private:
@@ -461,7 +455,6 @@ class depth_buffer_manager_t : public noncopyable_t
         int attached_to = -1;
         int width  = 0;
         int height = 0;
-        struct wlr_buffer *attached_fb = NULL;
         int64_t last_used = 0;
     };
 
@@ -492,55 +485,10 @@ class depth_buffer_manager_t : public noncopyable_t
                                            GL_TEXTURE_2D, buffer.tex, 0));
             GL_CALL(glBindTexture(GL_TEXTURE_2D, 0));
          }
-       /* else */
-       /*   { */
-            /* XXX: TODO: Implement Attach Buffer for Pixman */
-            /* wlr_log(WLR_DEBUG, "Pixman depth_buffer_manager attach buffer"); */
-         /* } */
 
         buffer.width  = width;
         buffer.height = height;
         buffer.attached_to = fb;
-        buffer.last_used   = get_current_time();
-    }
-
-    void attach_buffer(depth_buffer_t& buffer, struct wlr_buffer *fb, int width, int height)
-    {
-        if ((buffer.attached_fb == fb) &&
-            (buffer.width == width) &&
-            (buffer.height == height))
-        {
-            return;
-        }
-
-        /* if (!runtime_config.use_pixman) */
-        /*  { */
-        /*     if (buffer.tex != (GLuint) - 1) */
-        /*       { */
-        /*          GL_CALL(glDeleteTextures(1, &buffer.tex)); */
-        /*       } */
-
-        /*     GL_CALL(glGenTextures(1, &buffer.tex)); */
-        /*     GL_CALL(glBindTexture(GL_TEXTURE_2D, buffer.tex)); */
-        /*     GL_CALL(glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT, */
-        /*                          width, height, 0, GL_DEPTH_COMPONENT, GL_UNSIGNED_INT, NULL)); */
-
-        /*     GL_CALL(glBindTexture(GL_TEXTURE_2D, buffer.tex)); */
-        /*     GL_CALL(glBindFramebuffer(GL_FRAMEBUFFER, fb)); */
-        /*     GL_CALL(glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, */
-        /*                                    GL_TEXTURE_2D, buffer.tex, 0)); */
-        /*     GL_CALL(glBindTexture(GL_TEXTURE_2D, 0)); */
-        /*  } */
-       /* else */
-       if (runtime_config.use_pixman)
-         {
-            /* XXX: TODO: Implement Attach Buffer for Pixman */
-            wlr_log(WLR_DEBUG, "Pixman depth_buffer_manager attach buffer %p", fb);
-         }
-
-        buffer.width  = width;
-        buffer.height = height;
-        buffer.attached_fb = fb;
         buffer.last_used   = get_current_time();
     }
 
@@ -549,37 +497,6 @@ class depth_buffer_manager_t : public noncopyable_t
         for (auto& buffer : buffers)
         {
             if (buffer.attached_to == fb)
-            {
-                return buffer;
-            }
-        }
-
-        /** New buffer? */
-        if (buffers.size() < MAX_BUFFERS)
-        {
-            buffers.push_back(depth_buffer_t{});
-
-            return buffers.back();
-        }
-
-        /** Evict oldest */
-        auto oldest = &buffers.front();
-        for (auto& buffer : buffers)
-        {
-            if (buffer.last_used < oldest->last_used)
-            {
-                oldest = &buffer;
-            }
-        }
-
-        return *oldest;
-    }
-
-    depth_buffer_t& find_buffer(struct wlr_buffer *fb)
-    {
-        for (auto& buffer : buffers)
-        {
-            if (buffer.attached_fb == fb)
             {
                 return buffer;
             }
@@ -851,6 +768,8 @@ class wf::render_manager::impl
                 default_streams[i][j].buffer.fb  = 0;
                 default_streams[i][j].buffer.tex = 0;
                 default_streams[i][j].ws = {i, j};
+                default_streams[i][j].buffer.buffer = NULL;
+                default_streams[i][j].buffer.texture = NULL;
             }
         }
     }
@@ -1098,15 +1017,18 @@ class wf::render_manager::impl
         {
            struct wlr_buffer *current_fb;
 
-           /* current_fb = */
-           /*    wlr_pixman_renderer_get_current_image(wf::get_core().renderer); */
-           current_fb =
-               wlr_pixman_renderer_get_current_buffer(wf::get_core().renderer);
+           current_fb = wlr_renderer_get_current_buffer(wf::get_core().renderer);
+           if (!current_fb)
+           {
+               wlr_log(WLR_ERROR, "Could not get current buffer");
+               return;
+           }
+
            bind_output(current_fb);
            postprocessing->set_output_framebuffer(current_fb);
            const auto& default_fb = postprocessing->get_target_framebuffer();
-           depth_buffer_manager->ensure_depth_buffer(
-               default_fb.buffer, default_fb.viewport_width, default_fb.viewport_height);
+           /* depth_buffer_manager->ensure_depth_buffer( */
+           /*     default_fb.buffer, default_fb.viewport_width, default_fb.viewport_height); */
 
            for (auto& row : this->default_streams)
            {
@@ -1584,6 +1506,11 @@ class wf::render_manager::impl
             /* Use the workspace buffers */
             repaint.fb.fb  = stream.buffer.fb;
             repaint.fb.tex = stream.buffer.tex;
+        }
+        if ((stream.buffer.texture != NULL))
+        {
+            repaint.fb.buffer = stream.buffer.buffer;
+            repaint.fb.texture = stream.buffer.texture;
         }
 
         auto g   = output->get_relative_geometry();
