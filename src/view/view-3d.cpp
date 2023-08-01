@@ -308,10 +308,10 @@ void wf::view_3D::render_box(wf::texture_t src_tex, wlr_box src_box,
         1.0
     });
 
-    transform = fb.transform * scale * translate * transform;
-
     if (!runtime_config.use_pixman)
      {
+        transform = fb.transform * scale * translate * transform;
+
         OpenGL::render_begin(fb);
         fb.logic_scissor(scissor_box);
         OpenGL::render_transformed_texture(src_tex, quad.geometry, {},
@@ -320,11 +320,35 @@ void wf::view_3D::render_box(wf::texture_t src_tex, wlr_box src_box,
      }
    else
      {
-        wlr_log(WLR_DEBUG, "Pixman View3D render_box render_transformed_texture");
+        auto og = view->get_output()->get_relative_geometry();
+        glm::mat4 depth_scale =
+            glm::scale(glm::mat4(1.0), {1, 1, 2.0 / std::min(og.width, og.height)});
+
+        transform = fb.transform *
+                    glm::translate(glm::mat4(1.0f), {fb.geometry.width/2.0f, fb.geometry.height/2.0f, 0.0f}) *
+                    glm::scale(glm::mat4(1.0f), {1.0f, -1.0f, 1.0f}) *
+                    translate *
+                    translation *
+                    depth_scale *
+                    rotation *
+                    scaling;
+
+        float matrix[9];
+        Pixman::mat4_to_mat3(transform, matrix);
+
+        glm::vec4 p1 = {(float)quad.geometry.x1, (float)quad.geometry.y1, 0.f, 1.f};
+        glm::vec4 p2 = {(float)quad.geometry.x2, (float)quad.geometry.y2, 0.f, 1.f};
+        p1 = transform * p1;
+        p2 = transform * p2;
+
+        wlr_box new_scissor_box = {
+            static_cast<int>(p1.x), static_cast<int>(p1.y),
+            static_cast<int>(p2.x - p1.x), static_cast<int>(p2.y - p1.y)
+        };
+
         Pixman::render_begin(fb);
-        fb.logic_scissor(scissor_box);
-	/* FIXME */
-	float matrix[9] = { 1, 0, 0, 0, 1, 0, 0, 0, 1 };
+        fb.logic_scissor(new_scissor_box);
+
         Pixman::render_transformed_texture(src_tex.texture, quad.geometry, {},
                                            matrix, color);
         Pixman::render_end();
