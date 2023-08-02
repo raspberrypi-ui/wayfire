@@ -1,6 +1,7 @@
 #include <wayfire/plugin.hpp>
 #include <wayfire/output.hpp>
 #include <wayfire/opengl.hpp>
+#include <wayfire/pixman.hpp>
 #include <wayfire/render-manager.hpp>
 #include <wayfire/util/duration.hpp>
 
@@ -102,12 +103,20 @@ class wayfire_zoom_screen : public wf::plugin_interface_t
         const float x1 = x * scale;
         const float y1 = y * scale;
 
-        OpenGL::render_begin(source);
-        GL_CALL(glBindFramebuffer(GL_READ_FRAMEBUFFER, source.fb));
-        GL_CALL(glBindFramebuffer(GL_DRAW_FRAMEBUFFER, destination.fb));
-        GL_CALL(glBlitFramebuffer(x1, y1, x1 + tw, y1 + th, 0, 0, w, h,
-            GL_COLOR_BUFFER_BIT, GL_LINEAR));
-        OpenGL::render_end();
+        if (!getenv("WAYFIRE_USE_PIXMAN"))
+         {
+            OpenGL::render_begin(source);
+            GL_CALL(glBindFramebuffer(GL_READ_FRAMEBUFFER, source.fb));
+            GL_CALL(glBindFramebuffer(GL_DRAW_FRAMEBUFFER, destination.fb));
+            GL_CALL(glBlitFramebuffer(x1, y1, x1 + tw, y1 + th, 0, 0, w, h,
+                                      GL_COLOR_BUFFER_BIT, GL_LINEAR));
+            OpenGL::render_end();
+         }
+       else
+         {
+            Pixman::fb_blit(source, destination, x1, y1, x1 + tw, y1 + th,
+                            0, 0, w, h);
+         }
 
         if (!fixed && !progression.running() && (progression - 1 <= 0.01))
         {
