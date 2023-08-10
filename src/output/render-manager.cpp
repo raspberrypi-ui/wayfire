@@ -285,13 +285,11 @@ struct postprocessing_manager_t
     {
         /* Sometimes, the framebuffer by OpenGL is Y-inverted.
          * This is the case only if the target framebuffer is not 0 */
-
-       if (runtime_config.use_pixman) return;
-
-       if (output_fb == 0)
-         {
+       /* FIXME */
+        if (output_fb == 0)
+        {
             return;
-         }
+        }
 
         fb.wl_transform = wlr_output_transform_compose(
             (wl_output_transform)fb.wl_transform, WL_OUTPUT_TRANSFORM_FLIPPED_180);
@@ -351,7 +349,6 @@ struct postprocessing_manager_t
         default_framebuffer.buffer = output_buffer;
         default_framebuffer.fb  = output_fb;
         default_framebuffer.tex = 0;
-        default_framebuffer.texture = NULL;
 
         /* Allocate texture for pixman rendering */
         if (runtime_config.use_pixman && post_effects.size())
@@ -405,13 +402,11 @@ struct postprocessing_manager_t
             fb.fb  = post_buffers[default_out_buffer].fb;
             fb.tex = post_buffers[default_out_buffer].tex;
             fb.buffer = post_buffers[default_out_buffer].buffer;
-            fb.texture = post_buffers[default_out_buffer].texture;
         } else
         {
             fb.fb  = output_fb;
             fb.tex = 0;
             fb.buffer = output_buffer;
-            fb.texture = NULL;
         }
 
         workaround_wlroots_backend_y_invert(fb);
@@ -449,15 +444,14 @@ class depth_buffer_manager_t : public noncopyable_t
 
     ~depth_buffer_manager_t()
     {
-       if (!runtime_config.use_pixman)
-         {
-            OpenGL::render_begin();
-            for (auto& buffer : buffers)
-              {
-                 GL_CALL(glDeleteTextures(1, &buffer.tex));
-              }
-            OpenGL::render_end();
-         }
+        if (runtime_config.use_pixman) return;
+        /* XXX: TODO: Implement Texture Delete for Pixman */
+        OpenGL::render_begin();
+        for (auto& buffer : buffers)
+        {
+            GL_CALL(glDeleteTextures(1, &buffer.tex));
+        }
+        OpenGL::render_end();
     }
 
   private:
@@ -469,6 +463,7 @@ class depth_buffer_manager_t : public noncopyable_t
         int attached_to = -1;
         int width  = 0;
         int height = 0;
+        struct wlr_buffer *attached_fb = NULL;
         int64_t last_used = 0;
     };
 
@@ -807,8 +802,6 @@ class wf::render_manager::impl
                 default_streams[i][j].buffer.fb  = 0;
                 default_streams[i][j].buffer.tex = 0;
                 default_streams[i][j].ws = {i, j};
-                default_streams[i][j].buffer.buffer = NULL;
-                default_streams[i][j].buffer.texture = NULL;
             }
         }
     }
@@ -856,6 +849,8 @@ class wf::render_manager::impl
 
     /* Actual rendering functions */
 
+/* XXX: TODO: Add a bind_output for Pixman */
+
     /**
      * Bind the output's EGL surface, allocate buffers
      */
@@ -898,7 +893,8 @@ class wf::render_manager::impl
             }
             else
             {
-                Pixman::render_begin(postprocessing->output_buffer);
+                Pixman::render_begin(output->handle->width, output->handle->height,
+                    postprocessing->output_fb);
                 Pixman::clear({1, 1, 0, 1});
                 Pixman::render_end();
             }
@@ -1056,18 +1052,10 @@ class wf::render_manager::impl
         {
            struct wlr_buffer *current_fb;
 
-           current_fb = wlr_renderer_get_current_buffer(wf::get_core().renderer);
-           if (!current_fb)
-           {
-               wlr_log(WLR_ERROR, "Could not get current buffer");
-               return;
-           }
-
+           current_fb =
+               wlr_pixman_renderer_get_current_buffer(wf::get_core().renderer);
            bind_output(current_fb);
            postprocessing->set_output_framebuffer(current_fb);
-           const auto& default_fb = postprocessing->get_target_framebuffer();
-           /* depth_buffer_manager->ensure_depth_buffer( */
-           /*     default_fb.buffer, default_fb.viewport_width, default_fb.viewport_height); */
 
            for (auto& row : this->default_streams)
            {
@@ -1202,7 +1190,8 @@ class wf::render_manager::impl
             }
             else
             {
-                Pixman::render_begin(postprocessing->output_buffer);
+                Pixman::render_begin(output->handle->width, output->handle->height,
+                    postprocessing->output_fb);
                 Pixman::clear({0, 0, 0, 1});
                 Pixman::render_end();
             }
