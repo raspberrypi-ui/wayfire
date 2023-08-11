@@ -4,6 +4,8 @@
 #include <wayfire/pixman.hpp>
 #include <wayfire/render-manager.hpp>
 #include <wayfire/util/duration.hpp>
+#include <wayfire/util/log.hpp>
+#include <wayfire/nonstd/wlroots-full.hpp>
 
 class wayfire_zoom_screen : public wf::plugin_interface_t
 {
@@ -115,7 +117,7 @@ class wayfire_zoom_screen : public wf::plugin_interface_t
        else
          {
             Pixman::fb_blit(source, destination, x1, y1, x1 + tw, y1 + th,
-                            0, 0, w, h);
+                            0, 0, w, h, param);
          }
 
         if (!fixed && !progression.running() && (progression - 1 <= 0.01))
