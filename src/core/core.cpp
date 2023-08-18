@@ -102,7 +102,7 @@ struct wf_xdg_decoration_t
             wf::wf_surface_from_void(decor->surface->data));
         if (wf_surface)
         {
-            wf_surface->set_decoration_mode(use_csd);
+            wf_surface->set_decoration_mode(use_csd, false);
         }
     };
 
