@@ -396,7 +396,7 @@ class wayfire_xwayland_view_base : public wf::wlr_view_t
     {
         uint32_t csd_flags = WLR_XWAYLAND_SURFACE_DECORATIONS_NO_TITLE |
             WLR_XWAYLAND_SURFACE_DECORATIONS_NO_BORDER;
-        this->set_decoration_mode(xw->decorations & csd_flags);
+        this->set_decoration_mode_xw(xw->decorations & csd_flags);
     }
 
     virtual void close() override

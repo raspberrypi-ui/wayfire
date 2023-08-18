@@ -277,6 +277,23 @@ void wf::wlr_view_t::set_decoration_mode(bool use_csd)
     }
 }
 
+void wf::wlr_view_t::set_decoration_mode_xw(bool use_csd)
+{
+    bool was_decorated = should_be_decorated();
+    this->has_client_decoration = use_csd;
+    if ((was_decorated != should_be_decorated()) && is_mapped())
+    {
+        wf::view_decoration_state_updated_signal data;
+        data.view = self();
+
+        this->emit_signal("decoration-state-updated", &data);
+        if (get_output())
+        {
+            get_output()->emit_signal("view-decoration-state-updated", &data);
+        }
+    }
+}
+
 void wf::wlr_view_t::set_output(wf::output_t *wo)
 {
     auto old_output = get_output();
