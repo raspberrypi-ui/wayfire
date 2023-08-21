@@ -255,17 +255,30 @@ wlr_surface*wf::wlr_view_t::get_keyboard_focus_surface()
 
 bool wf::wlr_view_t::should_be_decorated()
 {
-    return role == wf::VIEW_ROLE_TOPLEVEL && (!has_client_decoration || !has_gtk_decoration);
+    return role == wf::VIEW_ROLE_TOPLEVEL && !has_client_decoration;
 }
 
-void wf::wlr_view_t::set_decoration_mode(bool use_csd, bool xwayland)
+void wf::wlr_view_t::set_decoration_mode(bool use_csd)
 {
     bool was_decorated = should_be_decorated();
     this->has_client_decoration = use_csd;
-    if (!xwayland)
+    /* This is a moderately kludgey hack to get consistent decorations.
+     * This function is not called by native GTK Wayland windows, but is called by 
+     * everything else.
+     * Xwayland windows are always decorated by the plugin anyway, unless they have a 
+     * custom GtkHeaderBar, which the use_csd argument correctly shows - so for
+     * Xwayland windows, we don't need to hack anything.
+     * We detect Xwayland windows by the absence of a toplevel_handle.
+     * If we have a non-Xwayland, non-GTK window, and if the option to only decorate
+     * GTK windows is set, we force the has_client_decoration flag to false.
+     * This marks the window as not having client-side decorations, and hence the plugin
+     * will decorate it. In order for this to work properly, non-GTK windows must have
+     * client-side decorations deactivated elsewhere.
+     */
+    if (this->toplevel_handle)
     {
         wf::option_wrapper_t<bool> only_gtk ("core/only_decorate_gtk");
-        if (only_gtk == 1) this->has_gtk_decoration = false;
+        if (only_gtk == 1) this->has_client_decoration = false;
     }
     if ((was_decorated != should_be_decorated()) && is_mapped())
     {
