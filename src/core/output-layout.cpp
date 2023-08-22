@@ -1388,6 +1388,9 @@ class output_layout_t::impl
                 lo->apply_state(state);
                 wlr_output_layout_remove(output_layout, handle);
             }
+
+	    wlr_output_update_enabled(handle,
+				      !(state.source & OUTPUT_IMAGE_SOURCE_NONE));
         }
 
         /* Second: enable outputs with fixed positions. */
