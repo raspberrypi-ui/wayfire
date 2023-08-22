@@ -36,3 +36,4 @@ install_data('scale-title-filter.xml', install_dir: conf_data.get('PLUGIN_XML_DI
 install_data('autostart-static.xml', install_dir: conf_data.get('PLUGIN_XML_DIR'))
 install_data('pixdecor.xml', install_dir: conf_data.get('PLUGIN_XML_DIR'))
 install_data('winshadows.xml', install_dir: conf_data.get('PLUGIN_XML_DIR'))
+install_data('pixswitcher.xml', install_dir: conf_data.get('PLUGIN_XML_DIR'))

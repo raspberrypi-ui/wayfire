@@ -291,9 +291,6 @@ namespace Pixman
              /* wlr_log(WLR_DEBUG, "\tAllocated new buffer %p", fb->buffer); */
           }
 
-        if (!fb->texture)
-          fb->texture = wlr_texture_from_buffer(renderer, fb->buffer);
-
         if (fb->buffer != Pixman::current_output_fb)
           {
              if (first_allocate || (width != fb->viewport_width) ||
@@ -312,6 +309,9 @@ namespace Pixman
                   fb->texture = wlr_texture_from_buffer(renderer, fb->buffer);
                }
           }
+
+        if (!fb->texture)
+          fb->texture = wlr_texture_from_buffer(renderer, fb->buffer);
 
         return is_resize || first_allocate;
      }

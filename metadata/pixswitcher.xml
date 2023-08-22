@@ -1,0 +1,35 @@
+<?xml version="1.0"?>
+<wayfire>
+	<plugin name="pixswitcher">
+		<_short>PixSwitcher</_short>
+		<_long>A plugin to change active window with an animation.</_long>
+		<category>Window Management</category>
+		<!-- Key-bindings -->
+		<option name="next_view" type="key">
+			<_short>Next view</_short>
+			<_long>Switches to the next view with the specified key.</_long>
+			<default>&lt;alt&gt; KEY_TAB</default>
+		</option>
+		<option name="prev_view" type="key">
+			<_short>Previous view</_short>
+			<_long>Switches to the previous view with the specified key.</_long>
+			<default>&lt;alt&gt; &lt;shift&gt; KEY_TAB</default>
+		</option>
+		<!-- Effects -->
+		<option name="bg_dim_speed" type="int">
+			<_short>Duration</_short>
+			<_long>Sets the duration of the animation in milliseconds.</_long>
+			<default>500</default>
+		</option>
+		<option name="thumbnail_scale" type="double">
+			<_short>Thumbnail size</_short>
+			<_long>Sets the thumbnail size.</_long>
+			<default>1.0</default>
+		</option>
+		<option name="duration" type="int">
+			<_short>Duration</_short>
+			<_long>Sets the duration of the animation in milliseconds.</_long>
+			<default>500</default>
+		</option>
+	</plugin>
+</wayfire>
