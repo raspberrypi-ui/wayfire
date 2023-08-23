@@ -114,9 +114,9 @@ namespace Pixman
 
    void render_texture(wf::texture_t tex, const wf::framebuffer_t& framebuffer, const wf::geometry_t& geometry, glm::vec4 color)
      {
-        /* wlr_log(WLR_DEBUG, "Pixman Render WF::Texture %p Framebuffer", tex); */
-        /* wlr_log(WLR_DEBUG, "\tGeometry: %d %d %d %d", */
-        /*         geometry.x, geometry.y, geometry.width, geometry.height); */
+       /* wlr_log(WLR_DEBUG, "Pixman Render WF::Texture %p Framebuffer", tex); */
+       /* wlr_log(WLR_DEBUG, "\tGeometry: %d %d %d %d", */
+       /*          geometry.x, geometry.y, geometry.width, geometry.height); */
 
        float mat[9];
        framebuffer.get_orthographic_projection(mat);
