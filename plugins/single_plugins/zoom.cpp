@@ -141,7 +141,11 @@ class wayfire_zoom_screen : public wf::plugin_interface_t
             {
                 fixed = true;
                 output->render->add_post(&render_hook);
-                output->render->set_redraw_always();
+                /* If using OpenGL backend always redraw */
+                if (!getenv("WAYFIRE_USE_PIXMAN"))
+                 {
+                    output->render->set_redraw_always();
+                 }
             }
         }
         else
