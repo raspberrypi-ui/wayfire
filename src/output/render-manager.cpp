@@ -353,6 +353,13 @@ struct postprocessing_manager_t
         default_framebuffer.tex = 0;
         default_framebuffer.texture = NULL;
 
+        /* Allocate texture for pixman rendering */
+        if (runtime_config.use_pixman)
+        {
+            auto renderer = wf::get_core().renderer;
+            default_framebuffer.texture = wlr_texture_from_buffer(renderer, output_buffer);
+        }
+
         int last_buffer_idx = default_out_buffer;
         int next_buffer_idx = 1;
 
@@ -376,6 +383,12 @@ struct postprocessing_manager_t
             last_buffer_idx  = next_buffer_idx;
             next_buffer_idx ^= 0b11; // alternate 1 and 2
         });
+
+        /* Destory allocated texture to prevent memory leak */
+        if (runtime_config.use_pixman && default_framebuffer.texture)
+        {
+            wlr_texture_destroy(default_framebuffer.texture);
+        }
     }
 
     wf::framebuffer_t get_target_framebuffer() const
@@ -1530,11 +1543,6 @@ class wf::render_manager::impl
             /* Use the workspace buffers */
             repaint.fb.fb  = stream.buffer.fb;
             repaint.fb.tex = stream.buffer.tex;
-        }
-        if ((stream.buffer.texture != NULL))
-        {
-            repaint.fb.buffer = stream.buffer.buffer;
-            repaint.fb.texture = stream.buffer.texture;
         }
 
         auto g   = output->get_relative_geometry();

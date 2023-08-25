@@ -116,8 +116,10 @@ class wayfire_zoom_screen : public wf::plugin_interface_t
          }
        else
          {
-            Pixman::fb_blit(source, destination, x1, y1, x1 + tw, y1 + th,
+            Pixman::render_begin(destination);
+            Pixman::fb_blit(source, destination, x1, y1, tw, th,
                             0, 0, w, h, param);
+            Pixman::render_end();
          }
 
         if (!fixed && !progression.running() && (progression - 1 <= 0.01))
