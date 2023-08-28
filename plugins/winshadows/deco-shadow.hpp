@@ -27,6 +27,8 @@ class decoration_shadow_t {
         wf::geometry_t window_geometry;
         wlr_box calculate_padding(const wf::geometry_t window_geometry) const;
 
+        void generate_shadow_texture(wf::point_t window_origin, bool glow);
+
         wf::option_wrapper_t<wf::color_t> shadow_color_option { "winshadows/shadow_color" };
         wf::option_wrapper_t<int> shadow_radius_option { "winshadows/shadow_radius" };
         wf::option_wrapper_t<bool> clip_shadow_inside { "winshadows/clip_shadow_inside" };
@@ -42,6 +44,11 @@ class decoration_shadow_t {
         static const std::string shadow_vert_shader;
         static const std::string shadow_frag_shader;
         static const std::string shadow_glow_frag_shader;
+
+        wlr_texture *shadow_texture;
+        wf::geometry_t cached_geometry;
+        bool cached_glow;
+        uint32_t *shadow_image;
 };
 
 }
