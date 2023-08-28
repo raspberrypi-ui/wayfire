@@ -85,6 +85,10 @@ namespace Pixman
         /*         (float)color.r, (float)color.g, (float)color.b, (float)color.a); */
         /* wlr_log(WLR_DEBUG, "\tBox: %d %d %d %d", box.x, box.y, box.width, box.height); */
 
+        if (box.width <= 0 || box.height <= 0) {
+            return;
+        }
+
         auto renderer = wf::get_core().renderer;
         const struct wlr_box wbox =
           {
