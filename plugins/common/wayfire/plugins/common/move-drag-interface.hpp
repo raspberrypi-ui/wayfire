@@ -160,6 +160,11 @@ class scale_around_grab_t : public wf::view_transformer_t
      */
     wf::point_t grab_position;
 
+    /**
+     * The original area to use pixman's OP_SRC in compose.
+     */
+    struct wlr_box src_orig_area;
+
     uint32_t get_z_order() override
     {
         return wf::TRANSFORMER_HIGHLEVEL - 1;
@@ -213,9 +218,29 @@ class scale_around_grab_t : public wf::view_transformer_t
         auto bbox = get_bounding_box(src_box, src_box);
 
         if (!runtime_config.use_pixman)
-         OpenGL::render_begin(target_fb);
+        {
+            OpenGL::render_begin(target_fb);
+        }
         else
-         Pixman::render_begin(target_fb);
+        {
+	    /* All the operations are done regarding the original area
+	     * when the drag starts; so let's keep a copy.
+	     */
+	    if (wlr_box_empty(&src_orig_area))
+		Pixman::get_src_op_area(src_tex.texture, &src_orig_area);
+
+	    if (!wlr_box_empty(&src_orig_area))
+	    {
+		struct wlr_box new_area = {
+		    .x = src_orig_area.x + (bbox.x - src_box.x),
+		    .y = src_orig_area.y + (bbox.y - src_box.y),
+		    .width = src_orig_area.width,
+		    .height = src_orig_area.height,
+		};
+		Pixman::set_src_op_area(src_tex.texture, &new_area);
+	    }
+            Pixman::render_begin(target_fb);
+        }
 
         for (auto& rect : damage)
         {

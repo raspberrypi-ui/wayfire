@@ -21,13 +21,15 @@ namespace Pixman
    void render_rectangle(wf::geometry_t box, wf::color_t color, glm::mat4 matrix);
    void render_texture(struct wlr_texture *texture, const wf::framebuffer_t& framebuffer, const wf::geometry_t& geometry, glm::vec4 color = glm::vec4(1.f));
    void render_texture(wf::texture_t texture, const wf::framebuffer_t& framebuffer, const wf::geometry_t& geometry, glm::vec4 color = glm::vec4(1.f));
-  void render_transformed_texture(struct wlr_texture *tex, const gl_geometry& g, const gl_geometry& texg, float transform[9], glm::vec4 color = glm::vec4(1.f), float angle = 0.0f);
-  void render_transformed_texture(struct wlr_texture *tex, const wf::geometry_t& geometry, float transform[9], glm::vec4 color = glm::vec4(1.f), float angle = 0.0f);
+   void render_transformed_texture(struct wlr_texture *tex, const wf::framebuffer_t& framebuffer, const gl_geometry& g, const gl_geometry& texg, float transform[9], glm::vec4 color = glm::vec4(1.f), float angle = 0.0f);
+   void render_transformed_texture(struct wlr_texture *tex, const wf::framebuffer_t& framebuffer, const wf::geometry_t& geometry, float transform[9], glm::vec4 color = glm::vec4(1.f), float angle = 0.0f);
 //   void render_transformed_texture(wf::texture_t tex, const gl_geometry& g, const gl_geometry& texg, glm::mat4 transform = glm::mat4(1.0), glm::vec4 color = glm::vec4(1.f));
 //   void render_transformed_texture(wf::texture_t tex, const wf::geometry_t& geometry, glm::mat4 transform = glm::mat4(1.0), glm::vec4 color = glm::vec4(1.f));
    void render_end();
    void clear(wf::color_t color);
    void fb_blit(const wf::framebuffer_base_t& src, const wf::framebuffer_base_t& dest, int sx, int sy, int sw, int sh, int dx, int dy, int dw, int dh);
+   void set_src_op_area(struct wlr_texture *tex, struct wlr_box *src_area);
+   void get_src_op_area(struct wlr_texture *tex, struct wlr_box *src_area);
 }
 
 #endif

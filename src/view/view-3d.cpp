@@ -229,8 +229,8 @@ void wf::view_2D::render_box(wf::texture_t src_tex, wlr_box src_box,
 
         Pixman::render_begin(fb);
         fb.logic_scissor(scissor_box);
-        Pixman::render_transformed_texture(src_tex.texture, gg, {},
-                                           mat,
+        Pixman::render_transformed_texture(src_tex.texture, fb, gg, {},
+			                   mat,
                                            {1.0f, 1.0f, 1.0f, alpha},
 					   angle);
         Pixman::render_end();
@@ -420,7 +420,7 @@ void wf::view_3D::render_box(wf::texture_t src_tex, wlr_box src_box,
         fb.logic_scissor(scissor_box);
 	/* FIXME */
 	float matrix[9] = { 1, 0, 0, 0, 1, 0, 0, 0, 1 };
-        Pixman::render_transformed_texture(src_tex.texture, quad.geometry, {},
+        Pixman::render_transformed_texture(src_tex.texture, fb, quad.geometry, {},
                                            matrix, color);
         Pixman::render_end();
      }

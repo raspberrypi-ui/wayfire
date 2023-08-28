@@ -322,6 +322,22 @@ void wf::wlr_view_t::commit()
     }
 
     this->last_bounding_box = get_bounding_box();
+
+    /* Set non-blending area to render with pixman SRC operator */
+    if (wlr_texture_is_pixman(wlr_surface_get_texture(surface)))
+    {
+        auto wm_geom = get_wm_geometry();
+        auto out_geom = get_output_geometry();
+	if ((this->last_bounding_box.x == out_geom.x && wm_geom.x > out_geom.x) ||
+	    (this->last_bounding_box.y == out_geom.y && wm_geom.y > out_geom.y))
+	  wlr_pixman_texture_set_src_op_area(wlr_surface_get_texture(surface),
+					     &wm_geom);
+
+	if ((this->last_bounding_box.x == wm_geom.x && out_geom.x > wm_geom.x) ||
+	    (this->last_bounding_box.y == wm_geom.y && out_geom.y > wm_geom.y))
+	  wlr_pixman_texture_set_src_op_area(wlr_surface_get_texture(surface),
+					     &out_geom);
+    }
 }
 
 void wf::wlr_view_t::map(wlr_surface *surface)
