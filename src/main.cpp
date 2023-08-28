@@ -37,6 +37,7 @@ static void print_help()
     std::cout << " -h,  --help              print this help" << std::endl;
     std::cout << " -d,  --debug             enable debug logging" << std::endl;
     std::cout << " -p,  --pixman            enable pixman rendering" << std::endl;
+    std::cout << " -f,  --show-fps          show FPS on console" << std::endl;
     std::cout <<
         " -D,  --damage-debug      enable additional debug for damaged regions" <<
         std::endl;
@@ -188,6 +189,7 @@ int main(int argc, char *argv[])
         {"damage-debug", no_argument, NULL, 'D'},
         {"damage-rerender", no_argument, NULL, 'R'},
         {"pixman", no_argument, NULL, 'p'},
+        {"show-fps", no_argument, NULL, 'f'},
         {"help", no_argument, NULL, 'h'},
         {"version", no_argument, NULL, 'v'},
         {0, 0, NULL, 0}
@@ -197,7 +199,7 @@ int main(int argc, char *argv[])
     std::string config_backend = WF_DEFAULT_CONFIG_BACKEND;
 
     int c, i;
-    while ((c = getopt_long(argc, argv, "c:B:dDhRpv", opts, &i)) != -1)
+    while ((c = getopt_long(argc, argv, "c:B:dDhRpvf", opts, &i)) != -1)
     {
         switch (c)
         {
@@ -230,6 +232,9 @@ int main(int argc, char *argv[])
             setenv("WAYFIRE_USE_PIXMAN", "true", 1);
             break;
 
+	  case 'f':
+	    runtime_config.show_fps = true;
+	    break;
           case 'v':
             print_version();
             break;

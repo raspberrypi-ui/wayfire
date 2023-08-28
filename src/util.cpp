@@ -443,6 +443,14 @@ uint32_t wf::get_current_time()
     return wf::timespec_to_msec(ts);
 }
 
+int64_t wf::get_current_time_micro()
+{
+    timespec ts;
+    clock_gettime(CLOCK_MONOTONIC, &ts);
+
+    return ((int64_t)ts.tv_sec) * 1000000ll + ((int64_t)ts.tv_nsec) / 1000ll;
+}
+
 wf::geometry_t wf::clamp(wf::geometry_t window, wf::geometry_t output)
 {
     window.width  = wf::clamp(window.width, 0, output.width);

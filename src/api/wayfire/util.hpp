@@ -84,6 +84,9 @@ int64_t timespec_to_msec(const timespec& ts);
 /** Returns current time in msec, using CLOCK_MONOTONIC as a base */
 uint32_t get_current_time();
 
+/** Returns current time in microsec, using CLOCK_MONOTONIC as a base */
+int64_t get_current_time_micro();
+
 /** Return the closest valume to @value which is in [@min, @max] */
 template<class T>
 T clamp(T value, T min, T max)

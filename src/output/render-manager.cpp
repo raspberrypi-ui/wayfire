@@ -11,6 +11,7 @@
 #include "../core/pixman-priv.hpp"
 #include "../main.hpp"
 #include <algorithm>
+#include <iostream>
 #include <wayfire/nonstd/reverse.hpp>
 #include <wayfire/nonstd/safe-list.hpp>
 #include <wayfire/util/log.hpp>
@@ -582,6 +583,9 @@ struct repaint_delay_manager_t
      */
     void start_frame()
     {
+        if (runtime_config.show_fps)
+             update_fps();
+
         if (last_pageflip == -1)
         {
             last_pageflip = get_current_time();
@@ -661,6 +665,22 @@ struct repaint_delay_manager_t
         delay = clamp(delay + delta, min, max);
     }
 
+    void update_fps ()
+    {
+        int64_t current_clock = get_current_time_micro();
+        if (current_clock - clock_last_fps >= 1000000) {
+            if (frames_in_second) {
+                float seconds = (float)(current_clock - clock_last_fps)/1000000.0;
+                std::cout << "*** " << frames_in_second << " frames timings over "
+                          << seconds << "s: " << frames_in_second/ seconds << " FPS\n";
+            }
+            clock_last_fps = current_clock;
+            frames_in_second = 1;
+        } else {
+            frames_in_second++;
+        }
+    }
+
     void reset_increase_timer()
     {
         last_increase = get_current_time();
@@ -679,6 +699,10 @@ struct repaint_delay_manager_t
 
     // Time of last frame
     int64_t last_pageflip = -1; // -1 is invalid
+
+    // Used to calculate FPS
+    int64_t clock_last_fps = 0;
+    int32_t frames_in_second = 0;
 
     int64_t refresh_nsec;
     wf::option_wrapper_t<int> max_render_time{"core/max_render_time"};
