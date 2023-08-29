@@ -136,31 +136,8 @@ void decoration_theme_t::render_background(const wf::framebuffer_t& fb,
     rectangle.y += border;
     rectangle.width -= 2 * border;
 
-    // draw top line 2 pixels shorter at each end
-    rectangle.height = 1;
-    rectangle.x += 2;
-    rectangle.width -= 4;
-   if (!getenv("WAYFIRE_USE_PIXMAN"))
-//   if (!runtime_config.use_pixman)
-     OpenGL::render_rectangle (rectangle, color, fb.get_orthographic_projection());
-   else
-     Pixman::render_rectangle (rectangle, color, fb.get_orthographic_projection());
-
-    // draw next line 1 pixel shorter at each end
-    rectangle.y += 1;
-    rectangle.x -= 1;
-    rectangle.width += 2;
-   if (!getenv("WAYFIRE_USE_PIXMAN"))
-//   if (!runtime_config.use_pixman)
-     OpenGL::render_rectangle (rectangle, color, fb.get_orthographic_projection());
-   else
-     Pixman::render_rectangle (rectangle, color, fb.get_orthographic_projection());
-
-    // draw remainder full width
-    rectangle.y += 1;
-    rectangle.height = get_title_height () - 2;
-    rectangle.x -= 1;
-    rectangle.width += 2;
+    // draw background
+    rectangle.height = get_title_height ();
    if (!getenv("WAYFIRE_USE_PIXMAN"))
 //   if (!runtime_config.use_pixman)
      {
