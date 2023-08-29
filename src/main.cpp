@@ -315,7 +315,7 @@ int main(int argc, char *argv[])
      {
         /* setenv("WLR_RENDERER", "pixman", 1); */
         /* core.renderer = wlr_renderer_autocreate(core.backend); */
-        core.renderer = wlr_pixman_renderer_create();
+        core.renderer = wlr_pixman_renderer_create_with_drm_fd(drm_fd);
      }
 
     core.allocator = wlr_allocator_autocreate(core.backend, core.renderer);
