@@ -13,6 +13,7 @@
 
 namespace Pixman
 {
+   void mat4_to_mat3(glm::mat4 matrix, float mat[9]);
    void render_begin(); // use to just bind the fb but not draw
    void render_begin(const wf::framebuffer_base_t& fb);
    void render_begin(int32_t viewport_width, int32_t viewport_height);

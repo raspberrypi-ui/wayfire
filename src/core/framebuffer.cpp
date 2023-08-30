@@ -192,15 +192,7 @@ namespace wf
    void wf::framebuffer_t::get_orthographic_projection(float mat[9]) const
      {
        auto projection = get_orthographic_projection();
-       mat[0] = projection[0][0];
-       mat[1] = projection[1][0];
-       mat[2] = projection[3][0];
-       mat[3] = projection[0][1];
-       mat[4] = projection[1][1];
-       mat[5] = projection[3][1];
-       mat[6] = projection[0][2];
-       mat[7] = projection[1][2];
-       mat[8] = 1.0f;
+       Pixman::mat4_to_mat3(projection, mat);
      }
 
    void wf::framebuffer_t::logic_scissor(wlr_box box) const

@@ -15,6 +15,19 @@ namespace Pixman
 {
    struct wlr_buffer *current_output_fb = NULL;
 
+   void mat4_to_mat3(glm::mat4 matrix, float mat[9])
+     {
+        mat[0] = matrix[0][0];
+        mat[1] = matrix[1][0];
+        mat[2] = matrix[3][0];
+        mat[3] = matrix[0][1];
+        mat[4] = matrix[1][1];
+        mat[5] = matrix[3][1];
+        mat[6] = matrix[0][3];
+        mat[7] = matrix[1][3];
+        mat[8] = 1.0f;
+     }
+
    void init()
      {
         wlr_log(WLR_DEBUG, "Pixman Render Init");
@@ -104,15 +117,7 @@ namespace Pixman
           };
 
         float mat[9];
-        mat[0] = matrix[0][0];
-        mat[1] = matrix[1][0];
-        mat[2] = matrix[3][0];
-        mat[3] = matrix[0][1];
-        mat[4] = matrix[1][1];
-        mat[5] = matrix[3][1];
-        mat[6] = matrix[0][2];
-        mat[7] = matrix[1][2];
-        mat[8] = 1.0f;
+        Pixman::mat4_to_mat3(matrix, mat);
 
         wlr_render_rect(renderer, &wbox, c, mat);
      }
