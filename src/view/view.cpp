@@ -1219,7 +1219,7 @@ bool wf::view_interface_t::render_transformed(const wf::framebuffer_t& framebuff
             for (const auto& rect : damage)
               {
                  framebuffer.logic_scissor(wlr_box_from_pixman_box(rect));
-                 Pixman::render_transformed_texture(previous_texture.texture, framebuffer,
+                 Pixman::render_transformed_texture(previous_texture.texture,
                                                     src_geometry, {}, matrix);
               }
 

@@ -123,14 +123,14 @@ namespace Pixman
        framebuffer.get_orthographic_projection(mat);
 
        if (tex.texture)
-          render_transformed_texture(tex.texture, framebuffer, geometry,
-                                     mat,
+          render_transformed_texture(tex.texture, geometry,
+				     mat,
                                      color);
         else if (tex.surface)
           {
              auto texture = wlr_surface_get_texture(tex.surface);
              if (texture)
-               render_transformed_texture(texture, framebuffer, geometry,
+               render_transformed_texture(texture, geometry,
                                           mat,
                                           color);
           }
@@ -143,12 +143,12 @@ namespace Pixman
        float mat[9];
        framebuffer.get_orthographic_projection(mat);
 
-       render_transformed_texture(texture, framebuffer, geometry,
-                                  mat,
-                                  color);
+       render_transformed_texture(texture, geometry,
+				  mat,
+				  color);
      }
 
-   void render_transformed_texture(struct wlr_texture *tex, const wf::framebuffer_t& framebuffer, const gl_geometry& g, const gl_geometry& texg, float transform[9], glm::vec4 color, float angle)
+   void render_transformed_texture(struct wlr_texture *tex, const gl_geometry& g, const gl_geometry& texg, float transform[9], glm::vec4 color, float angle)
      {
         float mat[9];
 
@@ -179,22 +179,13 @@ namespace Pixman
         //                        output->handle->transform_matrix);
         // wlr_matrix_project_box(mat, &wbox, WL_OUTPUT_TRANSFORM_NORMAL, 0,
         //                        fm);
-
-	/* Adapt the op_src_area to framebuffer geometry */
-	struct wlr_box src_area = { 0 };
-	wlr_pixman_texture_get_src_op_area(tex, &src_area);
-	if (!wlr_box_empty(&src_area)) {
-	    struct wlr_box fb_box = framebuffer.framebuffer_box_from_geometry_box(src_area);
-	    wlr_pixman_texture_set_src_op_area(tex, &fb_box);
-	}
-
         wlr_matrix_project_box(mat, &wbox, WL_OUTPUT_TRANSFORM_NORMAL, angle,
                                transform);
         wlr_render_texture_with_matrix(renderer, tex, mat, (float)color.a);
         // wlr_render_texture_with_matrix(renderer, tex, transform, (float)color.a);
      }
 
-  void render_transformed_texture(struct wlr_texture *tex, const wf::framebuffer_t& framebuffer, const wf::geometry_t& geometry, float transform[9], glm::vec4 color, float angle)
+   void render_transformed_texture(struct wlr_texture *tex, const wf::geometry_t& geometry, float transform[9], glm::vec4 color, float angle)
      {
         /* wlr_log(WLR_DEBUG, "Pixman Render Transformed Texture %p with wf::geometry_t", */
         /*         tex); */
@@ -217,7 +208,7 @@ namespace Pixman
         gg.x2 = geometry.x + geometry.width;
         gg.y2 = geometry.y + geometry.height;
 
-        render_transformed_texture(tex, framebuffer, gg, {}, transform, color, angle);
+        render_transformed_texture(tex, gg, {}, transform, color, angle);
      }
 
    void render_end()
@@ -337,14 +328,4 @@ namespace Pixman
                                in);
         wlr_render_texture_with_matrix(renderer, src.texture, out, 1.0f);
      }
-
-  void set_src_op_area(struct wlr_texture *tex, struct wlr_box *src_area)
-  {
-    wlr_pixman_texture_set_src_op_area(tex, src_area);
-  }
-
-  void get_src_op_area(struct wlr_texture *tex, struct wlr_box *src_area)
-  {
-    wlr_pixman_texture_get_src_op_area(tex, src_area);
-  }
 }
