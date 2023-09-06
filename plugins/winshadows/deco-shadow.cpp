@@ -94,6 +94,15 @@ void wf::winshadows::decoration_shadow_t::generate_shadow_texture(wf::point_t wi
     shadow_texture = wlr_texture_from_pixels(renderer, format[0].format, width*sizeof(uint32_t),
                                              width, height, shadow_image);
 
+    /* Set non-blending area to render with pixman SRC operator */
+    if (wlr_texture_is_pixman(shadow_texture)) {
+	wlr_pixman_texture_set_op_src_margins(shadow_texture,
+					      window_geometry.x - outer_geometry.x,
+					      window_geometry.y - outer_geometry.y,
+					      outer_geometry.width - window_geometry.width - (window_geometry.x - outer_geometry.x),
+					      outer_geometry.height - window_geometry.height - (window_geometry.y - outer_geometry.y));
+    }
+
     cached_geometry = outer_geometry;
     cached_glow = use_glow;
 }
