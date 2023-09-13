@@ -16,20 +16,30 @@
 			<default>&lt;alt&gt; &lt;shift&gt; KEY_TAB</default>
 		</option>
 		<!-- Effects -->
-		<option name="bg_dim_speed" type="int">
+		<option name="grid_columns" type="int">
+			<_short>Grid columns</_short>
+			<_long>Sets the maximum number of columns in the grid.</_long>
+			<default>5</default>
+		</option>
+		<option name="grid_margin" type="double">
+			<_short>Grid margin</_short>
+			<_long>The amount space of the full desktop not used for the grid.</_long>
+			<default>0.05</default>
+		</option>
+		<option name="speed" type="int">
 			<_short>Duration</_short>
 			<_long>Sets the duration of the animation in milliseconds.</_long>
 			<default>500</default>
 		</option>
-		<option name="thumbnail_scale" type="double">
+		<option name="thumbnail_selected_scale" type="double">
 			<_short>Thumbnail size</_short>
-			<_long>Sets the thumbnail size.</_long>
-			<default>1.0</default>
+			<_long>Sets the thumbnail size for the selected view.</_long>
+			<default>1.2</default>
 		</option>
-		<option name="duration" type="int">
-			<_short>Duration</_short>
-			<_long>Sets the duration of the animation in milliseconds.</_long>
-			<default>500</default>
+		<option name="thumbnail_unselected_scale" type="double">
+			<_short>Thumbnail size</_short>
+			<_long>Sets the thumbnail size for the unselected views.</_long>
+			<default>0.9</default>
 		</option>
 	</plugin>
 </wayfire>
