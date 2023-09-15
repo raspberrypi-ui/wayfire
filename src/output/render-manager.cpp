@@ -1549,6 +1549,9 @@ class wf::render_manager::impl
             /* Use the workspace buffers */
             repaint.fb.fb  = stream.buffer.fb;
             repaint.fb.tex = stream.buffer.tex;
+            /* Use the workspace buffers */
+            repaint.fb.buffer = stream.buffer.buffer;
+            repaint.fb.texture = stream.buffer.texture;
         }
 
         auto g   = output->get_relative_geometry();

@@ -122,23 +122,26 @@ class workspace_wall_t : public wf::signal_provider_t
             calculate_viewport_transformation_matrix(this->viewport, geometry);
         /* After all transformations of the framebuffer, the workspace should
          * span the visible part of the OpenGL coordinate space. */
-        const wf::geometry_t workspace_geometry = {-1, 1, 2, -2};
         for (auto& ws : get_visible_workspaces(this->viewport))
         {
             auto ws_matrix = calculate_workspace_matrix(ws);
-           if (!runtime_config.use_pixman)
-             {
-                OpenGL::render_transformed_texture(
-                                                   streams->get(ws).buffer.tex, workspace_geometry,
+            if (!runtime_config.use_pixman)
+            {
+                const wf::geometry_t workspace_geometry = {-1, 1, 2, -2};
+                OpenGL::render_transformed_texture(streams->get(ws).buffer.tex, workspace_geometry,
                                                    fb.get_orthographic_projection() * wall_matrix * ws_matrix);
+            }
+            else
+            {
+                auto target_geometry = get_workspace_rectangle(ws);
+                glm::mat4 transform = fb.transform * wall_matrix * ws_matrix;
+                float mat[9];
+                Pixman::mat4_to_mat3(transform, mat);
+                wf::geometry_t pixman_geometry = {0, 0, fb.viewport_width, fb.viewport_height};
+                auto texture = streams->get(ws).buffer.texture;
+                Pixman::render_transformed_texture(texture, pixman_geometry,
+                                                   mat, {1.0f, 1.0f, 1.0f, 1.0f});
              }
-           /* XXX: FIXME: Implement for Pixman */
-           /* else */
-           /*   { */
-           /*      Pixman::render_transformed_texture( */
-           /*                                         streams->get(ws).buffer.tex, workspace_geometry, */
-           /*                                         fb.get_orthographic_projection() * wall_matrix * ws_matrix); */
-           /*   } */
         }
 
         if (!runtime_config.use_pixman)
