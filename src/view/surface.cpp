@@ -497,16 +497,19 @@ void wf::wlr_surface_base_t::commit()
     {
         /* wlr_log(WLR_DEBUG, "Committing Surface Interface %p", _as_si); */
 
-        /* unlock previous layer_buffer */
-        if (_as_si->priv->layer_buffer)
-         wlr_buffer_unlock(_as_si->priv->layer_buffer);
+       if (!runtime_config.use_pixman)
+         {
+            /* unlock previous layer_buffer */
+            if (_as_si->priv->layer_buffer)
+              wlr_buffer_unlock(_as_si->priv->layer_buffer);
 
-        /* lock new layer_buffer */
-        if (get_buffer())
-         _as_si->priv->layer_buffer = wlr_buffer_lock(get_buffer());
+            /* lock new layer_buffer */
+            if (get_buffer())
+              _as_si->priv->layer_buffer = wlr_buffer_lock(get_buffer());
 
-        /* wlr_log(WLR_DEBUG, "   Setting Layer Buffer %p For Surface %p Interface %p", */
-        /*         _as_si->priv->layer_buffer, _as_si->priv->wsurface, _as_si); */
+            /* wlr_log(WLR_DEBUG, "   Setting Layer Buffer %p For Surface %p Interface %p", */
+            /*         _as_si->priv->layer_buffer, _as_si->priv->wsurface, _as_si); */
+         }
 
         /* we schedule redraw, because the surface might expect
          * a frame callback */
