@@ -67,6 +67,13 @@ static void cairo_surface_upload_to_texture(
              buffer.texture = nullptr;
           }
 
+	if (!src)
+	  {
+	    buffer.width = width;
+	    buffer.height = height;
+	    return;
+	  }
+
         if (!buffer.buffer)
           {
              auto allocator = wf::get_core().allocator;
