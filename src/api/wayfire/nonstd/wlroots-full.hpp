@@ -31,12 +31,14 @@ extern "C"
 #undef static
 #include <wlr/types/wlr_buffer.h>
 #include <wlr/types/wlr_viewporter.h>
+#include <wlr/types/wlr_drm.h>
 
 #include <wlr/types/wlr_output_damage.h>
 #include <wlr/types/wlr_presentation_time.h>
 #include <wlr/util/region.h>
 #include <wlr/types/wlr_screencopy_v1.h>
 #include <wlr/types/wlr_export_dmabuf_v1.h>
+#include <wlr/types/wlr_linux_dmabuf_v1.h>
 
 // Shells
 #if  __has_include(<xdg-shell-protocol.h>)
@@ -99,6 +101,9 @@ extern "C"
 #endif
 #include <wlr/types/wlr_gamma_control_v1.h>
 #include <wlr/types/wlr_xdg_output_v1.h>
+
+// Output layer
+#include <wlr/types/wlr_output_layer.h>
 
 // Input
 #include <wlr/types/wlr_seat.h>

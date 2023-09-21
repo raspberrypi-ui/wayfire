@@ -4,6 +4,7 @@
 #include "surface-impl.hpp"
 #include "subsurface.hpp"
 #include "wayfire/opengl.hpp"
+#include "wayfire/texture.hpp"
 #include "../core/core-impl.hpp"
 #include "wayfire/output.hpp"
 #include <wayfire/util/log.hpp>
@@ -17,6 +18,9 @@ wf::surface_interface_t::surface_interface_t()
 {
     this->priv = std::make_unique<impl>();
     this->priv->parent_surface = nullptr;
+    this->priv->layer = nullptr;
+    this->priv->layer_buffer = nullptr;
+    this->priv->layer_accepted = false;
 }
 
 void wf::surface_interface_t::add_subsurface(
@@ -55,7 +59,10 @@ void wf::surface_interface_t::remove_subsurface(
 }
 
 wf::surface_interface_t::~surface_interface_t()
-{}
+{
+    /* remove wlr_output_layer from previous output */
+    destroy_output_layer();
+}
 
 wf::surface_interface_t*wf::surface_interface_t::get_main_surface()
 {
@@ -111,7 +118,17 @@ wf::output_t*wf::surface_interface_t::get_output()
 
 void wf::surface_interface_t::set_output(wf::output_t *output)
 {
+   if ((priv->output) && (priv->output != output))
+     {
+        /* remove wlr_output_layer from previous output */
+        destroy_output_layer();
+     }
+
     priv->output = output;
+
+    /* create new wlr_output_layer */
+    create_output_layer(priv->output);
+
     for (auto& c : priv->surface_children_above)
     {
         c->set_output(output);
@@ -121,6 +138,83 @@ void wf::surface_interface_t::set_output(wf::output_t *output)
     {
         c->set_output(output);
     }
+}
+
+void wf::surface_interface_t::create_output_layer(wf::output_t *output)
+{
+   if (!output) return;
+   if (!priv->wsurface) return;
+   if (priv->layer) return;
+
+   /* create a new wlr_output_layer for this surface */
+   priv->layer = wlr_output_layer_create(output->handle);
+
+   wlr_log(WLR_DEBUG, "Created Layer %p For Surface %p Interface %p",
+           priv->layer, priv->wsurface, this);
+
+   /* setup layer feedback */
+   priv->handle_layer_feedback = [&] (void *data)
+     {
+        if (priv->wsurface)
+          {
+             auto& core = wf::get_core();
+             auto event = static_cast<wlr_output_layer_feedback_event *>(data);
+             struct wlr_linux_dmabuf_feedback_v1 feedback;
+
+             const struct wlr_linux_dmabuf_feedback_v1_init_options options =
+               {
+                  .main_renderer = core.renderer,
+                  .scanout_primary_output = nullptr,
+                  .output_layer_feedback_event = event,
+               };
+
+             wlr_linux_dmabuf_feedback_v1_init_with_options(&feedback, &options);
+             wlr_linux_dmabuf_v1_set_surface_feedback(core.protocols.linux_dmabuf,
+                                                      priv->wsurface, &feedback);
+             wlr_linux_dmabuf_feedback_v1_finish(&feedback);
+          }
+     };
+
+   priv->on_layer_feedback.set_callback(priv->handle_layer_feedback);
+   priv->on_layer_feedback.connect(&priv->layer->events.feedback);
+
+   /* add this layer to output layer_surfaces list */
+   output->layer_surfaces.push_back(nonstd::make_observer(this));
+}
+
+void wf::surface_interface_t::destroy_output_layer()
+{
+   auto wfo = priv->output;
+
+   /* reset output layers */
+   /* if (wfo) */
+   /*   wlr_output_set_layers(wfo->handle, NULL, 0); */
+
+   /* remove layer feedback */
+   priv->on_layer_feedback.disconnect();
+
+   /* unlock the layer buffer */
+   if (priv->layer_buffer)
+     {
+        wlr_buffer_unlock(priv->layer_buffer);
+        priv->layer_buffer = nullptr;
+     }
+
+   /* remove the layer */
+   if (priv->layer)
+     {
+        auto remove_from = [=] (auto& container)
+          {
+             auto it = std::remove_if(container.begin(), container.end(),
+                  [=] (const auto& ptr) {return ptr.get() == this;});
+             container.erase(it, container.end());
+          };
+
+        remove_from(wfo->layer_surfaces);
+
+        wlr_output_layer_destroy(priv->layer);
+        priv->layer = nullptr;
+     }
 }
 
 /* Static method */
@@ -390,6 +484,19 @@ void wf::wlr_surface_base_t::commit()
     apply_surface_damage();
     if (_as_si->get_output())
     {
+        /* wlr_log(WLR_DEBUG, "Committing Surface Interface %p", _as_si); */
+
+        /* unlock previous layer_buffer */
+        if (_as_si->priv->layer_buffer)
+         wlr_buffer_unlock(_as_si->priv->layer_buffer);
+
+        /* lock new layer_buffer */
+        if (get_buffer())
+         _as_si->priv->layer_buffer = wlr_buffer_lock(get_buffer());
+
+        /* wlr_log(WLR_DEBUG, "   Setting Layer Buffer %p For Surface %p Interface %p", */
+        /*         _as_si->priv->layer_buffer, _as_si->priv->wsurface, _as_si); */
+
         /* we schedule redraw, because the surface might expect
          * a frame callback */
         _as_si->get_output()->render->schedule_redraw();

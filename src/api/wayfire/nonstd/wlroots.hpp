@@ -34,6 +34,9 @@ extern "C"
     struct wlr_presentation;
     struct wlr_primary_selection_v1_device_manager;
 
+    struct wlr_drm;
+    struct wlr_linux_dmabuf_v1;
+
     struct wlr_xdg_foreign_v1;
     struct wlr_xdg_foreign_v2;
     struct wlr_xdg_foreign_registry;
@@ -45,11 +48,16 @@ extern "C"
     struct wlr_texture;
     struct wlr_viewporter;
 
+    /* wlr_output_layer support */
+    struct wlr_output_layer;
+    struct wlr_output_layer_state;
+
 #include <wlr/types/wlr_input_device.h>
 #include <wlr/types/wlr_pointer.h>
 #include <wlr/types/wlr_keyboard.h>
 #include <wlr/types/wlr_touch.h>
 #include <wlr/types/wlr_output.h>
+#include <wlr/types/wlr_output_layer.h>
 #include <wlr/util/box.h>
 #include <wlr/util/edges.h>
 #include <wayland-server.h>

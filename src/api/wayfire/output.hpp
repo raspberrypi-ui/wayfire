@@ -51,6 +51,9 @@ class output_t : public wf::object_base_t
      */
     wlr_output *handle;
 
+    /* a list of wf::surface_interface_t on this output */
+    std::vector<nonstd::observer_ptr<wf::surface_interface_t>> layer_surfaces;
+
     /**
      * The render manager of this output
      */

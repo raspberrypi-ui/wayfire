@@ -15,6 +15,10 @@ class surface_interface_t::impl
     std::vector<std::unique_ptr<surface_interface_t>> surface_children_below;
     size_t last_cnt_surfaces = 0;
 
+    /* wrapper for layer feedback */
+    wf::wl_listener_wrapper::callback_t handle_layer_feedback;
+    wf::wl_listener_wrapper on_layer_feedback;
+
     /**
      * Remove all subsurfaces and emit signals for them.
      */
@@ -30,6 +34,10 @@ class surface_interface_t::impl
      * subtract_opaque(), send_frame_done(), etc. work for the surface
      */
     wlr_surface *wsurface = nullptr;
+
+    struct wlr_output_layer *layer = nullptr;
+    struct wlr_buffer *layer_buffer = nullptr;
+    bool layer_accepted = false;
 };
 
 /**

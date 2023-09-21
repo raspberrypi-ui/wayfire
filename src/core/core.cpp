@@ -172,7 +172,34 @@ struct wlr_idle_inhibitor_t : public wf::idle_inhibitor_t
 
 void wf::compositor_core_impl_t::init()
 {
-    wlr_renderer_init_wl_display(renderer, display);
+    /* XXX: we don't want to call 'wlr_renderer_init_wl_display' directly 
+     * here as that ends up creating 2 linux_dmabuf's.
+     * 
+     * The function 'wlr_renderer_init_wl_display' creates it's own
+     * linux_dmabuf_v1 protocol object, however we actually need a 
+     * reference to it in Wayfire in order to support dmabuf feedback 
+     * protocol.
+     *
+     * To avoid creating 2 dmabuf protocol objects, we will mimick
+     * what 'wlr_renderer_init_wl_display' does and assign the protocol 
+     * object to Wayfire.
+     */
+    /* wlr_renderer_init_wl_display(renderer, display); */
+
+    /* XXX: begin mimick */
+    if (!wlr_renderer_init_wl_shm(renderer, display))
+     return;
+
+    if (wlr_renderer_get_dmabuf_texture_formats(renderer) != NULL)
+     {
+        if (wlr_renderer_get_drm_fd(renderer) >= 0)
+          if (wlr_drm_create(display, renderer) == NULL)
+            return;
+
+        protocols.linux_dmabuf =
+          wlr_linux_dmabuf_v1_create_with_renderer(display, 4, renderer);
+     }
+    /* XXX: end mimick */
 
     /* Order here is important:
      * 1. init_desktop_apis() must come after wlr_compositor_create(),
@@ -307,6 +334,7 @@ void wf::compositor_core_impl_t::init()
     gtk_shell = wf_gtk_shell_create(display);
 
     image_io::init();
+
     OpenGL::init();
 
     init_last_view_tracking();

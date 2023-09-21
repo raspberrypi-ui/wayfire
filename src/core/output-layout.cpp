@@ -352,6 +352,7 @@ struct output_layout_output_t
 
     std::unique_ptr<wf::output_impl_t> output;
     wl_listener_wrapper on_destroy, on_mode;
+    wl_listener_wrapper on_frame;
 
     std::shared_ptr<wf::config::section_t> config_section;
     wf::option_wrapper_t<wf::output_config::mode_t> mode_opt;
@@ -373,6 +374,7 @@ struct output_layout_output_t
     {
         this->handle = handle;
         on_destroy.connect(&handle->events.destroy);
+        on_frame.connect(&handle->events.frame);
         initialize_config_options();
 
         bool is_nested_compositor = wlr_output_is_wl(handle);

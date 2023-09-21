@@ -5,6 +5,8 @@
 #include "core-impl.hpp"
 #include "config.h"
 #include <wayfire/nonstd/wlroots-full.hpp>
+#include <wayfire/framebuffer.hpp>
+#include "../main.hpp"
 
 #include <glm/gtc/matrix_transform.hpp>
 
@@ -126,6 +128,86 @@ void bind_output(uint32_t fb)
 void unbind_output()
 {
     current_output_fb = 0;
+}
+
+static std::string framebuffer_status_to_str(
+    GLuint status)
+{
+    switch (status)
+    {
+      case GL_FRAMEBUFFER_INCOMPLETE_ATTACHMENT:
+        return "incomplete attachment";
+
+      case GL_FRAMEBUFFER_INCOMPLETE_MISSING_ATTACHMENT:
+        return "missing attachment";
+
+      case GL_FRAMEBUFFER_INCOMPLETE_DIMENSIONS:
+        return "incomplete dimensions";
+
+      case GL_FRAMEBUFFER_INCOMPLETE_MULTISAMPLE:
+        return "incomplete multisample";
+
+      default:
+        return "unknown";
+    }
+}
+
+bool fb_alloc(wf::framebuffer_base_t *framebuffer, int width, int height)
+{
+    bool first_allocate = false;
+    if (framebuffer->fb == (uint32_t)-1)
+    {
+        first_allocate = true;
+        GL_CALL(glGenFramebuffers(1, &framebuffer->fb));
+    }
+
+    if (framebuffer->tex == (uint32_t)-1)
+    {
+        first_allocate = true;
+        GL_CALL(glGenTextures(1, &framebuffer->tex));
+        GL_CALL(glBindTexture(GL_TEXTURE_2D, framebuffer->tex));
+        GL_CALL(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE));
+        GL_CALL(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE));
+        GL_CALL(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR));
+        GL_CALL(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR));
+    }
+
+    bool is_resize = false;
+    /* Special case: fb = 0. This occurs in the default workspace streams, we don't
+     * resize anything */
+    if (framebuffer->fb != OpenGL::current_output_fb)
+    {
+        if (first_allocate || (width != framebuffer->viewport_width) ||
+            (height != framebuffer->viewport_height))
+        {
+            is_resize = true;
+            GL_CALL(glBindTexture(GL_TEXTURE_2D, framebuffer->tex));
+            GL_CALL(glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height,
+                0, GL_RGBA, GL_UNSIGNED_BYTE, 0));
+        }
+    }
+
+    if (first_allocate)
+    {
+        GL_CALL(glBindFramebuffer(GL_FRAMEBUFFER, framebuffer->fb));
+        GL_CALL(glBindTexture(GL_TEXTURE_2D, framebuffer->tex));
+        GL_CALL(glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0,
+            GL_TEXTURE_2D, framebuffer->tex, 0));
+
+        auto status = GL_CALL(glCheckFramebufferStatus(GL_FRAMEBUFFER));
+        if (status != GL_FRAMEBUFFER_COMPLETE)
+        {
+            LOGE("Failed to initialize framebuffer: ",
+                 OpenGL::framebuffer_status_to_str(status));
+
+            return false;
+        }
+    }
+
+    GL_CALL(glBindTexture(GL_TEXTURE_2D, 0));
+    GL_CALL(glBindFramebuffer(GL_FRAMEBUFFER, OpenGL::current_output_fb));
+
+    return is_resize || first_allocate;
 }
 
 std::vector<GLfloat> vertexData;
@@ -300,203 +382,6 @@ void render_end()
 }
 }
 
-static std::string framebuffer_status_to_str(
-    GLuint status)
-{
-    switch (status)
-    {
-      case GL_FRAMEBUFFER_INCOMPLETE_ATTACHMENT:
-        return "incomplete attachment";
-
-      case GL_FRAMEBUFFER_INCOMPLETE_MISSING_ATTACHMENT:
-        return "missing attachment";
-
-      case GL_FRAMEBUFFER_INCOMPLETE_DIMENSIONS:
-        return "incomplete dimensions";
-
-      case GL_FRAMEBUFFER_INCOMPLETE_MULTISAMPLE:
-        return "incomplete multisample";
-
-      default:
-        return "unknown";
-    }
-}
-
-bool wf::framebuffer_base_t::allocate(int width, int height)
-{
-    bool first_allocate = false;
-    if (fb == (uint32_t)-1)
-    {
-        first_allocate = true;
-        GL_CALL(glGenFramebuffers(1, &fb));
-    }
-
-    if (tex == (uint32_t)-1)
-    {
-        first_allocate = true;
-        GL_CALL(glGenTextures(1, &tex));
-        GL_CALL(glBindTexture(GL_TEXTURE_2D, tex));
-        GL_CALL(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE));
-        GL_CALL(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE));
-        GL_CALL(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR));
-        GL_CALL(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR));
-    }
-
-    bool is_resize = false;
-    /* Special case: fb = 0. This occurs in the default workspace streams, we don't
-     * resize anything */
-    if (fb != OpenGL::current_output_fb)
-    {
-        if (first_allocate || (width != viewport_width) ||
-            (height != viewport_height))
-        {
-            is_resize = true;
-            GL_CALL(glBindTexture(GL_TEXTURE_2D, tex));
-            GL_CALL(glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height,
-                0, GL_RGBA, GL_UNSIGNED_BYTE, 0));
-        }
-    }
-
-    if (first_allocate)
-    {
-        GL_CALL(glBindFramebuffer(GL_FRAMEBUFFER, fb));
-        GL_CALL(glBindTexture(GL_TEXTURE_2D, tex));
-        GL_CALL(glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0,
-            GL_TEXTURE_2D, tex, 0));
-
-        auto status = GL_CALL(glCheckFramebufferStatus(GL_FRAMEBUFFER));
-        if (status != GL_FRAMEBUFFER_COMPLETE)
-        {
-            LOGE("Failed to initialize framebuffer: ",
-                framebuffer_status_to_str(status));
-
-            return false;
-        }
-    }
-
-    viewport_width  = width;
-    viewport_height = height;
-
-    GL_CALL(glBindTexture(GL_TEXTURE_2D, 0));
-    GL_CALL(glBindFramebuffer(GL_FRAMEBUFFER, OpenGL::current_output_fb));
-
-    return is_resize || first_allocate;
-}
-
-void wf::framebuffer_base_t::copy_state(wf::framebuffer_base_t&& other)
-{
-    this->viewport_width  = other.viewport_width;
-    this->viewport_height = other.viewport_height;
-
-    this->fb  = other.fb;
-    this->tex = other.tex;
-
-    other.reset();
-}
-
-wf::framebuffer_base_t::framebuffer_base_t(wf::framebuffer_base_t&& other)
-{
-    copy_state(std::move(other));
-}
-
-wf::framebuffer_base_t& wf::framebuffer_base_t::operator =(
-    wf::framebuffer_base_t&& other)
-{
-    if (this == &other)
-    {
-        return *this;
-    }
-
-    release();
-    copy_state(std::move(other));
-
-    return *this;
-}
-
-void wf::framebuffer_base_t::bind() const
-{
-    GL_CALL(glBindFramebuffer(GL_DRAW_FRAMEBUFFER, fb));
-    GL_CALL(glViewport(0, 0, viewport_width, viewport_height));
-}
-
-void wf::framebuffer_base_t::scissor(wlr_box box) const
-{
-    GL_CALL(glEnable(GL_SCISSOR_TEST));
-    GL_CALL(glScissor(box.x, viewport_height - box.y - box.height,
-        box.width, box.height));
-}
-
-void wf::framebuffer_base_t::release()
-{
-    if ((fb != uint32_t(-1)) && (fb != 0))
-    {
-        GL_CALL(glDeleteFramebuffers(1, &fb));
-    }
-
-    if ((tex != uint32_t(-1)) && ((fb != 0) || (tex != 0)))
-    {
-        GL_CALL(glDeleteTextures(1, &tex));
-    }
-
-    reset();
-}
-
-void wf::framebuffer_base_t::reset()
-{
-    fb  = -1;
-    tex = -1;
-    viewport_width = viewport_height = 0;
-}
-
-wlr_box wf::framebuffer_t::framebuffer_box_from_geometry_box(wlr_box box) const
-{
-    /* Step 1: Make relative to the framebuffer */
-    box.x -= this->geometry.x;
-    box.y -= this->geometry.y;
-
-    /* Step 2: Apply scale to box */
-    wlr_box scaled = box * scale;
-
-    /* Step 3: rotate */
-    if (has_nonstandard_transform)
-    {
-        // TODO: unimplemented, but also unused for now
-        LOGE("unimplemented reached: framebuffer_box_from_geometry_box"
-             " with has_nonstandard_transform");
-
-        return {0, 0, 0, 0};
-    }
-
-    int width = viewport_width, height = viewport_height;
-    if (wl_transform & 1)
-    {
-        std::swap(width, height);
-    }
-
-    wlr_box result;
-    wl_output_transform transform =
-        wlr_output_transform_invert((wl_output_transform)wl_transform);
-
-    wlr_box_transform(&result, &scaled, transform, width, height);
-
-    return result;
-}
-
-glm::mat4 wf::framebuffer_t::get_orthographic_projection() const
-{
-    auto ortho = glm::ortho(1.0f * geometry.x,
-        1.0f * geometry.x + 1.0f * geometry.width,
-        1.0f * geometry.y + 1.0f * geometry.height,
-        1.0f * geometry.y);
-
-    return this->transform * ortho;
-}
-
-void wf::framebuffer_t::logic_scissor(wlr_box box) const
-{
-    scissor(framebuffer_box_from_geometry_box(box));
-}
-
 /* look up the actual values of wl_output_transform enum
  * All _flipped transforms have values (regular_transfrom + 4) */
 glm::mat4 get_output_matrix_from_transform(wl_output_transform transform)
@@ -531,56 +416,6 @@ glm::mat4 get_output_matrix_from_transform(wl_output_transform transform)
     }
 
     return rotation_matrix * scale;
-}
-
-namespace wf
-{
-wf::texture_t::texture_t()
-{}
-wf::texture_t::texture_t(GLuint tex)
-{
-    this->tex_id = tex;
-}
-
-wf::texture_t::texture_t(wlr_texture *texture)
-{
-    assert(wlr_texture_is_gles2(texture));
-    wlr_gles2_texture_attribs attribs;
-    wlr_gles2_texture_get_attribs(texture, &attribs);
-
-    /* Wayfire works in inverted Y while wlroots doesn't, so we do invert here */
-    this->invert_y = true;
-    this->target   = attribs.target;
-    this->tex_id   = attribs.tex;
-
-    if (this->target == GL_TEXTURE_2D)
-    {
-        this->type = attribs.has_alpha ?
-            wf::TEXTURE_TYPE_RGBA : wf::TEXTURE_TYPE_RGBX;
-    } else
-    {
-        this->type = wf::TEXTURE_TYPE_EXTERNAL;
-    }
-}
-
-wf::texture_t::texture_t(wlr_surface *surface) :
-    texture_t(surface->buffer->texture)
-{
-    if (surface->current.viewport.has_src)
-    {
-        this->has_viewport = true;
-
-        auto width  = surface->buffer->texture->width;
-        auto height = surface->buffer->texture->height;
-
-        wlr_fbox fbox;
-        wlr_surface_get_buffer_source_box(surface, &fbox);
-        viewport_box.x1 = fbox.x / width;
-        viewport_box.x2 = (fbox.x + fbox.width) / width;
-        viewport_box.y1 = 1.0 - (fbox.y + fbox.height) / height;
-        viewport_box.y2 = 1.0 - (fbox.y) / height;
-    }
-}
 }
 
 namespace OpenGL
