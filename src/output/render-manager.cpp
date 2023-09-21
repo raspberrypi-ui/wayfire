@@ -295,14 +295,9 @@ struct postprocessing_manager_t
     }
 
     uint32_t output_fb = 0;
-    struct wlr_buffer *output_buffer = NULL;
     void set_output_framebuffer(uint32_t output_fb)
     {
         this->output_fb = output_fb;
-    }
-    void set_output_framebuffer(struct wlr_buffer *fb)
-    {
-        this->output_buffer = fb;
     }
 
     void allocate(int width, int height)
@@ -341,7 +336,6 @@ struct postprocessing_manager_t
     void run_post_effects()
     {
         wf::framebuffer_base_t default_framebuffer;
-        default_framebuffer.buffer = output_buffer;
         default_framebuffer.fb  = output_fb;
         default_framebuffer.tex = 0;
 
@@ -381,12 +375,10 @@ struct postprocessing_manager_t
         {
             fb.fb  = post_buffers[default_out_buffer].fb;
             fb.tex = post_buffers[default_out_buffer].tex;
-            fb.buffer = post_buffers[default_out_buffer].buffer;
         } else
         {
             fb.fb  = output_fb;
             fb.tex = 0;
-            fb.buffer = output_buffer;
         }
 
         workaround_wlroots_backend_y_invert(fb);
@@ -421,19 +413,7 @@ class depth_buffer_manager_t : public noncopyable_t
 
         attach_buffer(find_buffer(fb), fb, width, height);
     }
-#if 0
-    void ensure_depth_buffer(struct wlr_buffer *fb, int width, int height)
-    {
-        /* If the backend doesn't have its own framebuffer, then the
-         * framebuffer is created with a depth buffer. */
-        if (!fb)
-        {
-            return;
-        }
 
-        attach_buffer(find_buffer(fb), fb, width, height);
-    }
-#endif
     ~depth_buffer_manager_t()
     {
         OpenGL::render_begin();
@@ -450,11 +430,11 @@ class depth_buffer_manager_t : public noncopyable_t
 
     struct depth_buffer_t
     {
-        uint32_t tex = -1; //        GLuint tex = -1;
+        GLuint tex = -1;
         int attached_to = -1;
         int width  = 0;
         int height = 0;
-        struct wlr_buffer *attached_fb = NULL;
+
         int64_t last_used = 0;
     };
 
@@ -478,18 +458,6 @@ class depth_buffer_manager_t : public noncopyable_t
             width, height, 0, GL_DEPTH_COMPONENT, GL_UNSIGNED_INT, NULL));
         buffer.width  = width;
         buffer.height = height;
-        buffer.attached_to = fb;
-        buffer.last_used   = get_current_time();
-    }
-
-/*    void attach_buffer(depth_buffer_t& buffer, struct wlr_buffer *fb, int width, int height)
-    {
-        if ((buffer.attached_fb == fb) &&
-            (buffer.width == width) &&
-            (buffer.height == height))
-        {
-            return;
-        }
 
         GL_CALL(glBindTexture(GL_TEXTURE_2D, buffer.tex));
         GL_CALL(glBindFramebuffer(GL_FRAMEBUFFER, fb));
@@ -497,48 +465,15 @@ class depth_buffer_manager_t : public noncopyable_t
             GL_TEXTURE_2D, buffer.tex, 0));
         GL_CALL(glBindTexture(GL_TEXTURE_2D, 0));
 
-        buffer.width  = width;
-        buffer.height = height;
-        buffer.attached_fb = fb;
+        buffer.attached_to = fb;
         buffer.last_used   = get_current_time();
     }
-*/
+
     depth_buffer_t& find_buffer(int fb)
     {
         for (auto& buffer : buffers)
         {
             if (buffer.attached_to == fb)
-            {
-                return buffer;
-            }
-        }
-
-        /** New buffer? */
-        if (buffers.size() < MAX_BUFFERS)
-        {
-            buffers.push_back(depth_buffer_t{});
-
-            return buffers.back();
-        }
-
-        /** Evict oldest */
-        auto oldest = &buffers.front();
-        for (auto& buffer : buffers)
-        {
-            if (buffer.last_used < oldest->last_used)
-            {
-                oldest = &buffer;
-            }
-        }
-
-        return *oldest;
-    }
-
-    depth_buffer_t& find_buffer(struct wlr_buffer *fb)
-    {
-        for (auto& buffer : buffers)
-        {
-            if (buffer.attached_fb == fb)
             {
                 return buffer;
             }
@@ -745,8 +680,6 @@ class wf::render_manager::impl
 
     wf::option_wrapper_t<wf::color_t> background_color_opt;
 
-    wl_array layers;
-
     impl(output_t *o) :
         output(o)
     {
@@ -758,8 +691,6 @@ class wf::render_manager::impl
 
         on_frame.set_callback([&] (void*)
         {
-            wl_array_init(&layers);
-
             delay_manager->start_frame();
 
             auto repaint_delay = delay_manager->get_delay();
@@ -1033,53 +964,6 @@ class wf::render_manager::impl
         }
     }
 
-    /* XXX */
-    void update_output_layers()
-    {
-        /* check if the session is active. If not, then no need for layers */
-        auto session = wlr_backend_get_session(wf::get_core().backend);
-        if (!session->active) return;
-
-        wlr_log(WLR_DEBUG, "Update Output %p Layers", output);
-
-        /* setup layer states */
-        for (auto& surf : output->layer_surfaces)
-        {
-            wf::geometry_t geom = {0, 0, 0, 0};
-
-            if (!surf->priv->layer) continue;
-            if (!surf->is_mapped()) continue;
-
-            wlr_log(WLR_DEBUG, "\tAdd Surface Interface %p Layer %p To Output",
-                surf, surf->priv->layer);
-
-            auto view = (wf::view_interface_t *)surf->get_main_surface();
-            if (view) geom = view->get_wm_geometry();
-
-            struct wlr_output_layer_state *state =
-                (struct wlr_output_layer_state *)wl_array_add(&layers, sizeof(*state));
-            *state = (struct wlr_output_layer_state)
-              {
-                  .layer = surf->priv->layer,
-                  .buffer = surf->priv->layer_buffer,
-                  .x = geom.x,
-                  .y = geom.y,
-                  .accepted = false,
-              };
-        }
-
-        /* no need for an output test if we did not set any layers */
-        if (layers.size < 1) return;
-
-        /* set layers on output */
-        wlr_output_set_layers(output->handle, (struct wlr_output_layer_state *)layers.data,
-            layers.size / sizeof(struct wlr_output_layer_state));
-
-        /* test output */
-        if (!wlr_output_test(output->handle))
-            wlr_log(WLR_ERROR, "wlr_output_test() failed in update_output_layers");
-    }
-
     /**
      * Repaints the whole output, includes all effects and hooks
      */
@@ -1116,9 +1000,6 @@ class wf::render_manager::impl
             delay_manager->skip_frame();
             return;
         }
-
-        /* XXX: Update output layers */
-        update_output_layers();
 
         // Accumulate damage now, when we are sure we will render the frame.
         // Doing this earlier may mean that the damage from the previous frames
@@ -1224,9 +1105,6 @@ class wf::render_manager::impl
                 }
             }
         }
-
-        /* XXX: release layers */
-        wl_array_release(&layers);
     }
 
     /* Workspace stream implementation */
