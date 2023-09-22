@@ -47,6 +47,7 @@ static void cairo_surface_upload_to_texture(
      }
    else
      {
+        int surf_stride = cairo_image_surface_get_stride(surface);
         void *data;
         uint32_t format;
         size_t stride;
@@ -112,7 +113,19 @@ static void cairo_surface_upload_to_texture(
              return;
           }
 
-        memcpy(data, src, stride * height);
+	if (surf_stride == stride)
+	  {
+	    memcpy(data, src, stride * height);
+	  }
+	else
+	  {
+	    for (int i = 0; i < height; i++)
+	      {
+		memcpy(data + i * stride,
+		       src + i * surf_stride,
+		       surf_stride);
+	      }
+	  }
         wlr_buffer_end_data_ptr_access(buffer.buffer);
 
         buffer.texture = wlr_texture_from_buffer(renderer, buffer.buffer);
