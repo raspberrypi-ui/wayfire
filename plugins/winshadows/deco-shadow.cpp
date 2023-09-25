@@ -76,8 +76,8 @@ void wf::winshadows::decoration_shadow_t::generate_shadow_texture(wf::point_t wi
     glm::vec2 lower = {shadow_x, shadow_y};
     glm::vec2 upper = {shadow_x + inner_w, shadow_y + inner_h};
 
-    for(int y = 0; y < height; y++) {
-        for(int x = 0; x < width; x++) {
+    for(uint32_t y = 0; y < height; y++) {
+        for(uint32_t x = 0; x < width; x++) {
             glm::vec2 point{(float)x + bounds.x, (float)y + bounds.y};
             glm::vec4 out = premultiplied * box_shadow(lower, upper, point, sigma);
             if (use_glow)
@@ -210,8 +210,6 @@ void wf::winshadows::decoration_shadow_t::render(const framebuffer_t& fb, wf::po
         program.deactivate();
         OpenGL::render_end();
     } else {
-        auto renderer = wf::get_core().renderer;
-
         if (shadow_texture == NULL || cached_geometry != outer_geometry || cached_glow != use_glow) {
             generate_shadow_texture(window_origin, glow);
         }
