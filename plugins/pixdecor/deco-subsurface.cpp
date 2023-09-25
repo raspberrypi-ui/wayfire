@@ -182,7 +182,7 @@ class simple_decoration_surface : public wf::surface_interface_t,
     virtual void simple_render(const wf::framebuffer_t& fb, int x, int y,
         const wf::region_t& damage) override
     {
-        wf::region_t frame = this->cached_region + wf::point_t{x, y};
+        wf::region_t frame = layout.limit_region(this->cached_region) + wf::point_t{x, y};
         frame &= damage;
 
         for (const auto& box : frame)

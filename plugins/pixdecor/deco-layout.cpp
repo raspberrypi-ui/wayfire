@@ -150,6 +150,11 @@ void decoration_layout_t::resize(int width, int height)
         };
         this->layout_areas.push_back(std::make_unique<decoration_area_t>(
             DECORATION_AREA_TITLE, title_geometry));
+
+        this->cached_titlebar = {
+            border, border,
+            width-2*border, height-2*border
+        };
     }
 
     /* Resizing edges - left */
@@ -201,6 +206,12 @@ wf::region_t decoration_layout_t::calculate_region() const
     }
 
     return r;
+}
+
+wf::region_t decoration_layout_t::limit_region(wf::region_t &region) const
+{
+    wf::region_t out = region & this->cached_titlebar;
+    return out;
 }
 
 void decoration_layout_t::unset_hover(wf::point_t position)
