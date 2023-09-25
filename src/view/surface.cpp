@@ -62,7 +62,7 @@ void wf::surface_interface_t::remove_subsurface(
 
 wf::surface_interface_t::~surface_interface_t()
 {
-   if (!runtime_config.use_pixman)
+   if (runtime_config.use_liftoff)
      {
         /* remove wlr_output_layer from previous output */
         destroy_output_layer();
@@ -123,7 +123,7 @@ wf::output_t*wf::surface_interface_t::get_output()
 
 void wf::surface_interface_t::set_output(wf::output_t *output)
 {
-    if (!runtime_config.use_pixman)
+    if (runtime_config.use_liftoff)
      {
         if ((priv->output) && (priv->output != output))
           {
@@ -137,8 +137,10 @@ void wf::surface_interface_t::set_output(wf::output_t *output)
     /* create new wlr_output_layer */
    /* FIXME: This should only be called for the Main surface,
     * not any subsurfaces (i think) */
-    if (!runtime_config.use_pixman)
-      create_output_layer(priv->output);
+    if (runtime_config.use_liftoff)
+    {
+        create_output_layer(priv->output);
+    }
 
     for (auto& c : priv->surface_children_above)
     {
@@ -153,6 +155,7 @@ void wf::surface_interface_t::set_output(wf::output_t *output)
 
 void wf::surface_interface_t::create_output_layer(wf::output_t *output)
 {
+   assert(runtime_config.use_liftoff);
    if (!output) return;
    if (!priv->wsurface) return;
    if (priv->layer) return;
@@ -195,6 +198,7 @@ void wf::surface_interface_t::create_output_layer(wf::output_t *output)
 
 void wf::surface_interface_t::destroy_output_layer()
 {
+   assert(runtime_config.use_liftoff);
    auto wfo = priv->output;
 
    /* reset output layers */
@@ -495,22 +499,23 @@ void wf::wlr_surface_base_t::commit()
     apply_surface_damage();
     if (_as_si->get_output())
     {
-        /* wlr_log(WLR_DEBUG, "Committing Surface Interface %p", _as_si); */
+        if (runtime_config.use_liftoff)
+        {
+           /* wlr_log(WLR_DEBUG, "Committing Surface Interface %p", _as_si); */
 
-       if (!runtime_config.use_pixman)
-         {
             /* unlock previous layer_buffer */
             if (_as_si->priv->layer_buffer)
-              wlr_buffer_unlock(_as_si->priv->layer_buffer);
-
+            {
+                wlr_buffer_unlock(_as_si->priv->layer_buffer);
+            }
             /* lock new layer_buffer */
             if (get_buffer())
-              _as_si->priv->layer_buffer = wlr_buffer_lock(get_buffer());
-
+            {
+                _as_si->priv->layer_buffer = wlr_buffer_lock(get_buffer());
+            }
             /* wlr_log(WLR_DEBUG, "   Setting Layer Buffer %p For Surface %p Interface %p", */
             /*         _as_si->priv->layer_buffer, _as_si->priv->wsurface, _as_si); */
-         }
-
+        }
         /* we schedule redraw, because the surface might expect
          * a frame callback */
         _as_si->get_output()->render->schedule_redraw();

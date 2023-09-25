@@ -753,8 +753,10 @@ class wf::render_manager::impl
 
         on_frame.set_callback([&] (void*)
         {
-            wl_array_init(&layers);
-
+            if (runtime_config.use_liftoff)
+            {
+                wl_array_init(&layers);
+            }
             delay_manager->start_frame();
 
             auto repaint_delay = delay_manager->get_delay();
@@ -1080,6 +1082,7 @@ class wf::render_manager::impl
     /* XXX */
     void update_output_layers()
     {
+        assert(runtime_config.use_liftoff);
         /* check if the session is active. If not, then no need for layers */
         auto session = wlr_backend_get_session(wf::get_core().backend);
         if (!session->active) return;
@@ -1161,7 +1164,7 @@ class wf::render_manager::impl
             return;
         }
 
-        if (!runtime_config.use_pixman)
+        if (runtime_config.use_liftoff)
         {
             /* XXX: Update output layers */
             update_output_layers();
@@ -1289,7 +1292,10 @@ class wf::render_manager::impl
         }
 
         /* XXX: release layers */
-        wl_array_release(&layers);
+        if (runtime_config.use_liftoff)
+        {
+            wl_array_release(&layers);
+        }
     }
 
     /* Workspace stream implementation */

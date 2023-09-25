@@ -37,6 +37,7 @@ static void print_help()
     std::cout << " -h,  --help              print this help" << std::endl;
     std::cout << " -d,  --debug             enable debug logging" << std::endl;
     std::cout << " -p,  --pixman            enable pixman rendering" << std::endl;
+    std::cout << " -l,  --liftoff           enable liftoff rendering" << std::endl;
     std::cout << " -f,  --show-fps          show FPS on console" << std::endl;
     std::cout <<
         " -D,  --damage-debug      enable additional debug for damaged regions" <<
@@ -189,6 +190,7 @@ int main(int argc, char *argv[])
         {"damage-debug", no_argument, NULL, 'D'},
         {"damage-rerender", no_argument, NULL, 'R'},
         {"pixman", no_argument, NULL, 'p'},
+        {"liftoff", no_argument, NULL, 'l'},
         {"show-fps", no_argument, NULL, 'f'},
         {"help", no_argument, NULL, 'h'},
         {"version", no_argument, NULL, 'v'},
@@ -199,7 +201,7 @@ int main(int argc, char *argv[])
     std::string config_backend = WF_DEFAULT_CONFIG_BACKEND;
 
     int c, i;
-    while ((c = getopt_long(argc, argv, "c:B:dDhRpvf", opts, &i)) != -1)
+    while ((c = getopt_long(argc, argv, "c:B:dDhRpvfl", opts, &i)) != -1)
     {
         switch (c)
         {
@@ -232,6 +234,11 @@ int main(int argc, char *argv[])
             setenv("WAYFIRE_USE_PIXMAN", "true", 1);
             break;
 
+        case 'l':
+            runtime_config.use_liftoff = true;
+            setenv("WLR_DRM_FORCE_LIBLIFTOFF", "1", 1);
+	    break;
+
 	  case 'f':
 	    runtime_config.show_fps = true;
 	    break;
@@ -243,6 +250,18 @@ int main(int argc, char *argv[])
             std::cerr << "Unrecognized command line argument " << optarg << "\n" <<
                 std::endl;
         }
+    }
+
+    if (!runtime_config.use_liftoff && getenv("WLR_DRM_FORCE_LIBLIFTOFF"))
+    {
+        LOGI("Ignoring envvar WLR_DRM_FORCE_LIBLIFTOFF as wayfire doesn't use -l parameter");
+        unsetenv("WLR_DRM_FORCE_LIBLIFTOFF");
+    }
+    if (runtime_config.use_pixman && runtime_config.use_liftoff)
+    {
+        LOGI("liftoff rendering disabled. It can not be enabled together with pixman backend.");
+        unsetenv("WLR_DRM_FORCE_LIBLIFTOFF");
+        runtime_config.use_liftoff = false;
     }
 
     auto wlr_log_level =
@@ -284,7 +303,10 @@ int main(int argc, char *argv[])
     }
 
     if (!runtime_config.use_pixman)
-     {
+    {
+        if (runtime_config.use_liftoff) {
+            LOGI("liftoff enabled with OpenGL backend.");
+        }
         core.renderer  = wlr_gles2_renderer_create_with_drm_fd(drm_fd);
         core.egl = wlr_gles2_renderer_get_egl(core.renderer);
         assert(core.egl);
