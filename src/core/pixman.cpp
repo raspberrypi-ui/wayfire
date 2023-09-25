@@ -322,8 +322,6 @@ namespace Pixman
         float in[9], out[9];
         /* We need to flip the y coordinate to match pixman coordinate system */
         float new_y = dh - (sy + sh);
-        float diff_x = sw - sx;
-        float diff_y = sh - sy;
         float scale_factor_x = (float)dw / (float)sw;
         float scale_factor_y = (float)dh / (float)sh;
 
