@@ -45,10 +45,10 @@ class decoration_shadow_t {
         static const std::string shadow_frag_shader;
         static const std::string shadow_glow_frag_shader;
 
-        wlr_texture *shadow_texture;
+        wlr_texture *shadow_texture[4];
         wf::geometry_t cached_geometry;
         bool cached_glow;
-        uint32_t *shadow_image;
+        uint32_t *shadow_image[4];
 };
 
 }

@@ -26,6 +26,28 @@ static uint32_t vec4_to_rgb(glm::vec4 col) {
     return (r << 0) | (g << 8) | (b << 16) | (a << 24);
 }
 
+static void generate_box_shadow(uint32_t *texture, size_t start_x, size_t start_y,
+                                size_t width, size_t height,
+                                wf::geometry_t bounds,
+                                size_t inner_x, size_t inner_y,
+                                size_t inner_w, size_t inner_h,
+                                glm::vec2 lower, glm::vec2 upper,
+                                glm::vec2 glow_lower, glm::vec2 glow_upper,
+                                bool use_glow, float sigma, float glow_sigma,
+                                glm::vec4 premultiplied, glm::vec4 glow_premultiplied) {
+    for(size_t y = start_y; y < (start_y + height); y++) {
+        for(size_t x = start_x; x < (start_x + width); x++) {
+			glm::vec2 point{(float)x + bounds.x, (float)y + bounds.y};
+            glm::vec4 out = premultiplied * box_shadow(lower, upper, point, sigma);
+            if (use_glow)
+            {
+                out += glow_premultiplied * box_shadow(glow_lower, glow_upper, point, glow_sigma);
+            }
+            texture[(y-start_y)*width + (x-start_x)] = vec4_to_rgb(out);
+        }
+    }
+}
+
 void wf::winshadows::decoration_shadow_t::generate_shadow_texture(wf::point_t window_origin, bool glow) {
     auto renderer = wf::get_core().renderer;
     auto formats = wlr_renderer_get_render_formats(renderer);
@@ -55,10 +77,19 @@ void wf::winshadows::decoration_shadow_t::generate_shadow_texture(wf::point_t wi
     size_t width = bounds.width;
     size_t height = bounds.height;
 
-    if (shadow_image == NULL) {
-        shadow_image = (uint32_t*)malloc(width*height*sizeof(uint32_t));
+    size_t narrow_width = (width - window_geometry.width) / 2;
+    size_t narrow_height = (height - window_geometry.height) / 2;
+
+    if (shadow_image[0] == NULL) {
+        shadow_image[0] = (uint32_t*)malloc(width*narrow_height*sizeof(uint32_t));
+        shadow_image[1] = (uint32_t*)malloc(width*narrow_height*sizeof(uint32_t));
+        shadow_image[2] = (uint32_t*)malloc(narrow_width*window_geometry.height*sizeof(uint32_t));
+        shadow_image[3] = (uint32_t*)malloc(narrow_width*window_geometry.height*sizeof(uint32_t));
     } else {
-        shadow_image = (uint32_t*)realloc(shadow_image, width*height*sizeof(uint32_t));
+        shadow_image[0] = (uint32_t*)realloc(shadow_image[0], width*narrow_height*sizeof(uint32_t));
+        shadow_image[1] = (uint32_t*)realloc(shadow_image[1], width*narrow_height*sizeof(uint32_t));
+        shadow_image[2] = (uint32_t*)realloc(shadow_image[2], narrow_width*window_geometry.height*sizeof(uint32_t));
+        shadow_image[3] = (uint32_t*)realloc(shadow_image[3], narrow_width*window_geometry.height*sizeof(uint32_t));
     }
 
     float inner_x = window_geometry.x + window_origin.x;
@@ -76,32 +107,57 @@ void wf::winshadows::decoration_shadow_t::generate_shadow_texture(wf::point_t wi
     glm::vec2 lower = {shadow_x, shadow_y};
     glm::vec2 upper = {shadow_x + inner_w, shadow_y + inner_h};
 
-    for(uint32_t y = 0; y < height; y++) {
-        for(uint32_t x = 0; x < width; x++) {
-            glm::vec2 point{(float)x + bounds.x, (float)y + bounds.y};
-            glm::vec4 out = premultiplied * box_shadow(lower, upper, point, sigma);
-            if (use_glow)
-            {
-                out += glow_premultiplied * box_shadow(glow_lower, glow_upper, point, glow_sigma);
-            }
-            shadow_image[y*width + x] = vec4_to_rgb(out);
-        }
-    }
+    generate_box_shadow(shadow_image[0], 0, 0,
+                        width, narrow_height,
+                        bounds,
+                        inner_x, inner_y,
+                        inner_w, inner_h,
+                        lower, upper,
+                        glow_lower, glow_upper,
+                        use_glow, sigma, glow_sigma,
+                        premultiplied, glow_premultiplied);
+    generate_box_shadow(shadow_image[1], 0, window_geometry.height + narrow_height,
+                        width, narrow_height,
+                        bounds,
+                        inner_x, inner_y,
+                        inner_w, inner_h,
+                        lower, upper,
+                        glow_lower, glow_upper,
+                        use_glow, sigma, glow_sigma,
+                        premultiplied, glow_premultiplied);
+    generate_box_shadow(shadow_image[2], 0, narrow_height,
+                        narrow_width, window_geometry.height,
+                        bounds,
+                        inner_x, inner_y,
+                        inner_w, inner_h,
+                        lower, upper,
+                        glow_lower, glow_upper,
+                        use_glow, sigma, glow_sigma,
+                        premultiplied, glow_premultiplied);
+    generate_box_shadow(shadow_image[3], window_geometry.width + narrow_width, narrow_height,
+                        narrow_width, window_geometry.height,
+                        bounds,
+                        inner_x, inner_y,
+                        inner_w, inner_h,
+                        lower, upper,
+                        glow_lower, glow_upper,
+                        use_glow, sigma, glow_sigma,
+                        premultiplied, glow_premultiplied);
 
-    if (shadow_texture != NULL) {
-        wlr_texture_destroy(shadow_texture);
+    if (shadow_texture[0] != NULL) {
+        wlr_texture_destroy(shadow_texture[0]);
+        wlr_texture_destroy(shadow_texture[1]);
+        wlr_texture_destroy(shadow_texture[2]);
+        wlr_texture_destroy(shadow_texture[3]);
     }
-    shadow_texture = wlr_texture_from_pixels(renderer, format[0].format, width*sizeof(uint32_t),
-                                             width, height, shadow_image);
-
-    /* Set non-blending area to render with pixman SRC operator */
-    if (wlr_texture_is_pixman(shadow_texture)) {
-	wlr_pixman_texture_set_op_src_margins(shadow_texture,
-					      window_geometry.x - outer_geometry.x,
-					      window_geometry.y - outer_geometry.y,
-					      outer_geometry.width - window_geometry.width - (window_geometry.x - outer_geometry.x),
-					      outer_geometry.height - window_geometry.height - (window_geometry.y - outer_geometry.y));
-    }
+    shadow_texture[0] = wlr_texture_from_pixels(renderer, format[0].format, width*sizeof(uint32_t),
+                                                width, narrow_height, shadow_image[0]);
+    shadow_texture[1] = wlr_texture_from_pixels(renderer, format[0].format, width*sizeof(uint32_t),
+                                                width, narrow_height, shadow_image[1]);
+    shadow_texture[2] = wlr_texture_from_pixels(renderer, format[0].format, narrow_width*sizeof(uint32_t),
+                                                narrow_width, window_geometry.height, shadow_image[2]);
+    shadow_texture[3] = wlr_texture_from_pixels(renderer, format[0].format, narrow_width*sizeof(uint32_t),
+                                                narrow_width, window_geometry.height, shadow_image[3]);
 
     cached_geometry = outer_geometry;
     cached_glow = use_glow;
@@ -118,8 +174,8 @@ wf::winshadows::decoration_shadow_t::decoration_shadow_t() {
         );
         OpenGL::render_end();
     } else {
-        shadow_image = NULL;
-        shadow_texture = NULL;
+        shadow_image[0] = NULL;
+        shadow_texture[0] = NULL;
     }
 }
 
@@ -210,15 +266,31 @@ void wf::winshadows::decoration_shadow_t::render(const framebuffer_t& fb, wf::po
         program.deactivate();
         OpenGL::render_end();
     } else {
-        if (shadow_texture == NULL || cached_geometry != outer_geometry || cached_glow != use_glow) {
+        if (shadow_texture[0] == NULL || cached_geometry != outer_geometry || cached_glow != use_glow) {
             generate_shadow_texture(window_origin, glow);
         }
 
         wf::geometry_t bounds = outer_geometry + window_origin;
+        int width = (int)bounds.width;
+        int height = (int)bounds.height;
+
+        int narrow_width = (int)(width - window_geometry.width) / 2;
+        int narrow_height = (int)(height - window_geometry.height) / 2;
+
+        wf::geometry_t win_bounds[4] = {
+            {bounds.x, bounds.y, width, narrow_height},
+            {bounds.x, bounds.y + window_geometry.height + narrow_height, width, narrow_height},
+            {bounds.x, bounds.y + narrow_height, narrow_width, window_geometry.height},
+            {bounds.x + window_geometry.width + narrow_width, bounds.y + narrow_height, narrow_width, window_geometry.height},
+        };
+
 
         Pixman::render_begin(fb);
         fb.logic_scissor(scissor);
-        Pixman::render_texture(shadow_texture, fb, bounds, glm::vec4(1.f));
+        Pixman::render_texture(shadow_texture[0], fb, win_bounds[0], glm::vec4(1.f));
+        Pixman::render_texture(shadow_texture[1], fb, win_bounds[1], glm::vec4(1.f));
+        Pixman::render_texture(shadow_texture[2], fb, win_bounds[2], glm::vec4(1.f));
+        Pixman::render_texture(shadow_texture[3], fb, win_bounds[3], glm::vec4(1.f));
         Pixman::render_end();
     }
 }
