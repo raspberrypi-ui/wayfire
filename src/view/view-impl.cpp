@@ -328,21 +328,25 @@ void wf::wlr_view_t::commit()
     {
         auto wm_geom = get_wm_geometry();
         auto out_geom = get_output_geometry();
-	if ((this->last_bounding_box.x == out_geom.x && wm_geom.x > out_geom.x) ||
-	    (this->last_bounding_box.y == out_geom.y && wm_geom.y > out_geom.y))
+	if (wm_geom.x > out_geom.x ||
+	    wm_geom.y > out_geom.y)
 	  wlr_pixman_texture_set_op_src_margins(wlr_surface_get_texture(surface),
 						wm_geom.x - out_geom.x,
 						wm_geom.y - out_geom.y,
 						out_geom.width - wm_geom.width - (wm_geom.x - out_geom.x),
 						out_geom.height - wm_geom.height - (wm_geom.y - out_geom.y));
 
-	if ((this->last_bounding_box.x == wm_geom.x && out_geom.x > wm_geom.x) ||
-	    (this->last_bounding_box.y == wm_geom.y && out_geom.y > wm_geom.y))
+	if (out_geom.x > wm_geom.x ||
+	    out_geom.y > wm_geom.y)
 	  wlr_pixman_texture_set_op_src_margins(wlr_surface_get_texture(surface),
 						out_geom.x - wm_geom.x,
 						out_geom.y - wm_geom.y,
 						wm_geom.width - out_geom.width - (out_geom.x - wm_geom.x),
 						wm_geom.height - out_geom.height - (out_geom.y - wm_geom.y));
+	if (wm_geom == out_geom &&
+	    role == wf::VIEW_ROLE_TOPLEVEL)
+	  wlr_pixman_texture_set_op_src_margins(wlr_surface_get_texture(surface),
+						0, 0, 0, 0);
     }
 }
 
