@@ -354,7 +354,7 @@ struct postprocessing_manager_t
         default_framebuffer.texture = NULL;
 
         /* Allocate texture for pixman rendering */
-        if (runtime_config.use_pixman)
+        if (runtime_config.use_pixman && post_effects.size())
         {
             auto renderer = wf::get_core().renderer;
             default_framebuffer.texture = wlr_texture_from_buffer(renderer, output_buffer);
