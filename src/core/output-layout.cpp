@@ -1388,12 +1388,25 @@ class output_layout_t::impl
                  *
                  * This is needed so that clients can receive
                  * wl_surface.leave events for the to be destroyed output */
-                lo->apply_state(state);
+                if (state.source & OUTPUT_IMAGE_SOURCE_NONE)
+                {
+                    bool found = false;
+                    for (auto& ac : active_outputs)
+                    {
+                        if (ac->handle == handle)
+                        {
+                            lo->apply_state(state);
+                            found = true;
+                        }
+                    }
+                    if (!found) {
+                        wlr_output_update_enabled(handle,false);
+                    }
+                } else {
+                    lo->apply_state(state);
+                }
                 wlr_output_layout_remove(output_layout, handle);
             }
-
-	    wlr_output_update_enabled(handle,
-				      !(state.source & OUTPUT_IMAGE_SOURCE_NONE));
         }
 
         /* Second: enable outputs with fixed positions. */
