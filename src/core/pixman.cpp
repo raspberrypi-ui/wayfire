@@ -253,6 +253,11 @@ namespace Pixman
           {
              if ((width != fb->viewport_width) || (height != fb->viewport_height))
                {
+                  if (fb->texture)
+                    {
+                       wlr_texture_destroy(fb->texture);
+                       fb->texture = NULL;
+                    }
                   if (fb->buffer)
                     {
                        wlr_buffer_drop(fb->buffer);
@@ -297,16 +302,6 @@ namespace Pixman
                  (height != fb->viewport_height))
                {
                   is_resize = true;
-
-                  /* if the fb is getting resized, destroy old texture */
-                  if (fb->texture)
-                    {
-                       wlr_texture_destroy(fb->texture);
-                       fb->texture = NULL;
-                    }
-
-                  /* recreate texture on resize */
-                  fb->texture = wlr_texture_from_buffer(renderer, fb->buffer);
                }
           }
 
