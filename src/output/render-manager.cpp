@@ -1116,7 +1116,7 @@ class wf::render_manager::impl
         }
 
         /* no need for an output test if we did not set any layers */
-        if (layers.size < 1) return;
+        if ((layers.size / sizeof(struct wlr_output_layer_state)) < 1) return;
 
         /* set layers on output */
         wlr_output_set_layers(output->handle, (struct wlr_output_layer_state *)layers.data,
