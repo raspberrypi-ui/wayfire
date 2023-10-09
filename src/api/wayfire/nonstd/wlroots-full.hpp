@@ -41,6 +41,9 @@ extern "C"
 #include <wlr/types/wlr_export_dmabuf_v1.h>
 #include <wlr/types/wlr_linux_dmabuf_v1.h>
 
+/* wp_single_pixel_buffer support */
+#include <wlr/types/wlr_single_pixel_buffer_v1.h>
+
 // Shells
 #if  __has_include(<xdg-shell-protocol.h>)
     #include <wlr/types/wlr_xdg_shell.h>

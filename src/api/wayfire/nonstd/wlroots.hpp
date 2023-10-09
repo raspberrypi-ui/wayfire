@@ -52,12 +52,17 @@ extern "C"
     struct wlr_output_layer;
     struct wlr_output_layer_state;
 
+    /* wp_single_pixel_buffer support */
+    struct wlr_single_pixel_buffer_manager_v1;
+    struct wlr_single_pixel_buffer_v1;
+
 #include <wlr/types/wlr_input_device.h>
 #include <wlr/types/wlr_pointer.h>
 #include <wlr/types/wlr_keyboard.h>
 #include <wlr/types/wlr_touch.h>
 #include <wlr/types/wlr_output.h>
 #include <wlr/types/wlr_output_layer.h>
+#include <wlr/types/wlr_single_pixel_buffer_v1.h>
 #include <wlr/util/box.h>
 #include <wlr/util/edges.h>
 #include <wayland-server.h>

@@ -123,6 +123,9 @@ class compositor_core_t : public wf::object_base_t
         wlr_xdg_foreign_registry *foreign_registry;
         wlr_xdg_foreign_v1 *foreign_v1;
         wlr_xdg_foreign_v2 *foreign_v2;
+
+        /* single_pixel_buffer support */
+        wlr_single_pixel_buffer_manager_v1 *single_pixel_manager;
     } protocols;
 
     std::string to_string() const
