@@ -18,12 +18,12 @@ static float box_shadow(glm::vec2 lower, glm::vec2 upper, glm::vec2 point, float
     return (integral.z - integral.x) * (integral.w - integral.y);
 }
 
-static uint32_t vec4_to_rgb(glm::vec4 col) {
-    uint32_t r = (uint32_t)(col.x * 255) & 0xFF;
-    uint32_t g = (uint32_t)(col.y * 255) & 0xFF;
-    uint32_t b = (uint32_t)(col.z * 255) & 0xFF;
-    uint32_t a = (uint32_t)(col.w * 255) & 0xFF;
-    return (r << 0) | (g << 8) | (b << 16) | (a << 24);
+static uint32_t vec4_to_bgr(glm::vec4 col) {
+    uint32_t r = (uint32_t)(col.r * 255) & 0xFF;
+    uint32_t g = (uint32_t)(col.g * 255) & 0xFF;
+    uint32_t b = (uint32_t)(col.b * 255) & 0xFF;
+    uint32_t a = (uint32_t)(col.a * 255) & 0xFF;
+    return (b << 0) | (g << 8) | (r << 16) | (a << 24);
 }
 
 static void generate_box_shadow(uint32_t *texture, size_t start_x, size_t start_y,
@@ -41,7 +41,7 @@ static void generate_box_shadow(uint32_t *texture, size_t start_x, size_t start_
             {
                 out += glow_premultiplied * box_shadow(glow_lower, glow_upper, point, glow_sigma);
             }
-            texture[(y-start_y)*width + (x-start_x)] = vec4_to_rgb(out);
+            texture[(y-start_y)*width + (x-start_x)] = vec4_to_bgr(out);
         }
     }
 }
