@@ -327,7 +327,9 @@ class simple_decoration_surface : public wf::surface_interface_t,
         {
             current_thickness = 0;
             current_titlebar  = view->fullscreen ? 0 : theme.get_title_height();
-            this->cached_region.clear();
+            if (current_titlebar)
+                this->cached_region = layout.calculate_region();
+            else this->cached_region.clear();
         } else
         {
             current_thickness = theme.get_border_size();
