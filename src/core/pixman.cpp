@@ -131,15 +131,38 @@ namespace Pixman
        float mat[9];
        framebuffer.get_orthographic_projection(mat);
 
+       wf::geometry_t geo = geometry;
+       int width, height;
+       if (tex.texture) {
+          width = tex.texture->width;
+	      height = tex.texture->height;
+       } else if (tex.surface) {
+	      width = tex.surface->current.width;
+	      height = tex.surface->current.height;
+       }
+
+       /* If texture has a viewport, make sure we scale the size of the texture
+        * based on the ratio of the real dims to the viewport dims. The viewport
+        * dims are already calculated for and stored in the geometry argument of
+        * this function.
+        */
+       if (tex.has_viewport) {
+          float scale_factor_x = (float)width / (float)geo.width;
+          float scale_factor_y = (float)height / (float)geo.height;
+
+          geo.width = geo.width*scale_factor_x;
+          geo.height = geo.height*scale_factor_y;
+       }
+
        if (tex.texture)
-          render_transformed_texture(tex.texture, geometry,
+          render_transformed_texture(tex.texture, geo,
 				     mat,
                                      color);
         else if (tex.surface)
           {
              auto texture = wlr_surface_get_texture(tex.surface);
              if (texture)
-               render_transformed_texture(texture, geometry,
+               render_transformed_texture(texture, geo,
                                           mat,
                                           color);
           }
