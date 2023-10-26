@@ -4,12 +4,9 @@
 #include <config.h>
 #include <map>
 
-#define THEME_PATH "/usr/share/themes/PiXflat/gtk-3.0/"
-#define THEME_FILE THEME_PATH "gtk-contained.css"
-
 gboolean read_colour (char *file, const char *name, float *r, float *g, float *b)
 {
-    char *cmd = g_strdup_printf ("sed -n -e \"s/@define-color[ \t]*%s[ \t]*//p\" %s", name, file ? file : THEME_FILE);
+    char *cmd = g_strdup_printf ("sed -n -e \"s/@define-color[ \t]*%s[ \t]*//p\" %s", name, file);
     char *line = NULL;
     size_t len = 0;
     int n = 0, ir, ig, ib;
@@ -44,31 +41,35 @@ decoration_theme_t::decoration_theme_t()
 {
     float r, g, b;
     gs = g_settings_new ("org.gnome.desktop.interface");
+    char *theme = g_settings_get_string (gs, "gtk-theme");
 
     // read the current colour scheme
-    char *userconf = g_build_filename (g_get_user_data_dir (), "themes/PiXflat/gtk-3.0/gtk.css", NULL);
+    char *userconf = g_build_filename (g_get_user_data_dir (), "themes/", theme, "/gtk-3.0/gtk.css", NULL);
+    char *sysconf = g_build_filename ("/usr/share/themes/", theme, "/gtk-3.0/gtk-colours.css", NULL);
 
     if (read_colour (userconf, "theme_selected_bg_color", &r, &g, &b)
-        || read_colour (NULL, "theme_selected_bg_color", &r, &g, &b))
+        || read_colour (sysconf, "theme_selected_bg_color", &r, &g, &b))
             fg = {r, g, b, 1.0};
     else fg = {0.13, 0.13, 0.13, 0.67};
 
     if (read_colour (userconf, "theme_selected_fg_color", &r, &g, &b)
-        || read_colour (NULL, "theme_selected_fg_color", &r, &g, &b))
+        || read_colour (sysconf, "theme_selected_fg_color", &r, &g, &b))
             fg_text = {r, g, b, 1.0};
     else fg_text = {1.0, 1.0, 1.0, 1.0};
 
     if (read_colour (userconf, "theme_unfocused_bg_color", &r, &g, &b)
-        || read_colour (NULL, "theme_unfocused_bg_color", &r, &g, &b))
+        || read_colour (sysconf, "theme_unfocused_bg_color", &r, &g, &b))
             bg = {r, g, b, 1.0};
     else bg = {0.2, 0.2, 0.2, 0.87};
 
     if (read_colour (userconf, "theme_unfocused_fg_color", &r, &g, &b)
-        || read_colour (NULL, "theme_unfocused_fg_color", &r, &g, &b))
+        || read_colour (sysconf, "theme_unfocused_fg_color", &r, &g, &b))
             bg_text = {r, g, b, 1.0};
     else bg_text = {1.0, 1.0, 1.0, 1.0};
 
+    g_free (sysconf);
     g_free (userconf);
+    g_free (theme);
 }
 
 /** @return The available height for displaying the title */
@@ -176,7 +177,7 @@ cairo_surface_t*decoration_theme_t::render_text(std::string text,
     return surface;
 }
 
-cairo_surface_t*decoration_theme_t::get_button_surface(button_type_t button,
+cairo_surface_t *decoration_theme_t::get_button_surface(button_type_t button,
     const button_state_t& state, bool active) const
 {
     cairo_surface_t *cspng, *csout;
@@ -206,7 +207,9 @@ cairo_surface_t*decoration_theme_t::get_button_surface(button_type_t button,
         case BUTTON_MINIMIZE :          icon_name = "minimize";
                                         break;
     }
-    iconfile = g_strdup_printf (THEME_PATH "assets/window-%s%s%s.symbolic.png",
+
+    // these get recoloured according to theme, so just use the light theme version
+    iconfile = g_strdup_printf ("/usr/share/themes/PiXflat/gtk-3.0/assets/window-%s%s%s.symbolic.png",
          icon_name, state.hover ? "-hover" : "", get_font_height_px () >= LARGE_ICON_THRESHOLD ? "-large" : "");
 
     // read the icon into a surface
