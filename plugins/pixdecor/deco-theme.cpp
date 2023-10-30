@@ -11,24 +11,16 @@ namespace decor
 /** Create a new theme with the default parameters */
 decoration_theme_t::decoration_theme_t()
 {
-    float r, g, b;
     gs = g_settings_new ("org.gnome.desktop.interface");
 
     // read the current colour scheme
-    if (read_colour ("theme_selected_bg_color", &r, &g, &b)) fg = {r, g, b, 1.0};
-    else fg = {0.13, 0.13, 0.13, 0.67};
-
-    if (read_colour ("theme_selected_fg_color", &r, &g, &b)) fg_text = {r, g, b, 1.0};
-    else fg_text = {1.0, 1.0, 1.0, 1.0};
-
-    if (read_colour ("theme_unfocused_bg_color", &r, &g, &b)) bg = {r, g, b, 1.0};
-    else bg = {0.2, 0.2, 0.2, 0.87};
-
-    if (read_colour ("theme_unfocused_fg_color", &r, &g, &b)) bg_text = {r, g, b, 1.0};
-    else bg_text = {1.0, 1.0, 1.0, 1.0};
+    if (!read_colour ("theme_selected_bg_color", fg)) fg = {0.13, 0.13, 0.13, 0.67};
+    if (!read_colour ("theme_selected_fg_color", fg_text)) fg_text = {1.0, 1.0, 1.0, 1.0};
+    if (!read_colour ("theme_unfocused_bg_color", bg)) bg = {0.2, 0.2, 0.2, 0.87};
+    if (!read_colour ("theme_unfocused_fg_color", bg_text)) bg_text = {1.0, 1.0, 1.0, 1.0};
 }
 
-gboolean decoration_theme_t::read_colour (const char *name, float *r, float *g, float *b)
+gboolean decoration_theme_t::read_colour (const char *name, wf::color_t &col)
 {
     FILE *fp;
     char *cmd, *line, *theme;
@@ -39,6 +31,7 @@ gboolean decoration_theme_t::read_colour (const char *name, float *r, float *g, 
 
     for (i = 0; i < 2; i++)
     {
+        n = 0;
         line = NULL;
         len = 0;
         cmd = g_strdup_printf ("sed -n -e \"s/@define-color[ \t]*%s[ \t]*//p\" %s/themes/%s/gtk-3.0/*.css", name, i ? "/usr/share" : g_get_user_data_dir (), theme);
@@ -56,9 +49,7 @@ gboolean decoration_theme_t::read_colour (const char *name, float *r, float *g, 
 
         if (n == 3)
         {
-            *r = ir / 255.0;
-            *g = ig / 255.0;
-            *b = ib / 255.0;
+            col = { ir / 255.0, ig / 255.0, ib / 255.0, 1.0 };
             g_free (theme);
             return TRUE;
         }
