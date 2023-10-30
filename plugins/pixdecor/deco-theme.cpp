@@ -4,9 +4,9 @@
 #include <config.h>
 #include <map>
 
-gboolean read_colour (char *file, const char *name, float *r, float *g, float *b)
+gboolean read_colour (char *path, const char *name, float *r, float *g, float *b)
 {
-    char *cmd = g_strdup_printf ("sed -n -e \"s/@define-color[ \t]*%s[ \t]*//p\" %s", name, file);
+    char *cmd = g_strdup_printf ("sed -n -e \"s/@define-color[ \t]*%s[ \t]*//p\" %s/gtk-3.0/*.css", name, path);
     char *line = NULL;
     size_t len = 0;
     int n = 0, ir, ig, ib;
@@ -44,8 +44,8 @@ decoration_theme_t::decoration_theme_t()
     char *theme = g_settings_get_string (gs, "gtk-theme");
 
     // read the current colour scheme
-    char *userconf = g_build_filename (g_get_user_data_dir (), "themes/", theme, "/gtk-3.0/gtk.css", NULL);
-    char *sysconf = g_build_filename ("/usr/share/themes/", theme, "/gtk-3.0/gtk-colours.css", NULL);
+    char *userconf = g_build_filename (g_get_user_data_dir (), "themes/", theme, NULL);
+    char *sysconf = g_build_filename ("/usr/share/themes/", theme, NULL);
 
     if (read_colour (userconf, "theme_selected_bg_color", &r, &g, &b)
         || read_colour (sysconf, "theme_selected_bg_color", &r, &g, &b))
@@ -183,7 +183,7 @@ cairo_surface_t *decoration_theme_t::get_button_surface(button_type_t button,
     cairo_surface_t *cspng, *csout;
     unsigned char *sdata, *tdata;
     const char *icon_name;
-    char *iconfile;
+    char *iconfile, *theme;
     int sh, sw, th, tw, pad, r, g, b;
     float fr, fg, fb;
 
@@ -208,9 +208,10 @@ cairo_surface_t *decoration_theme_t::get_button_surface(button_type_t button,
                                         break;
     }
 
-    // these get recoloured according to theme, so just use the light theme version
-    iconfile = g_strdup_printf ("/usr/share/themes/PiXflat/gtk-3.0/assets/window-%s%s%s.symbolic.png",
+    theme = g_settings_get_string (gs, "gtk-theme");
+    iconfile = g_strdup_printf ("/usr/share/themes/%s/gtk-3.0/assets/window-%s%s%s.symbolic.png", theme,
          icon_name, state.hover ? "-hover" : "", get_font_height_px () >= LARGE_ICON_THRESHOLD ? "-large" : "");
+    g_free (theme);
 
     // read the icon into a surface
     cspng = cairo_image_surface_create_from_png (iconfile);
