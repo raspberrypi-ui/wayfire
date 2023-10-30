@@ -28,6 +28,8 @@ class decoration_theme_t
     /** @return The available border for resizing */
     int get_border_size() const;
 
+    gboolean read_colour (const char *name, float *r, float *g, float *b);
+
     /**
      * Fill the given rectangle with the background color(s).
      *

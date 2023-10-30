@@ -4,34 +4,6 @@
 #include <config.h>
 #include <map>
 
-gboolean read_colour (char *path, const char *name, float *r, float *g, float *b)
-{
-    char *cmd = g_strdup_printf ("sed -n -e \"s/@define-color[ \t]*%s[ \t]*//p\" %s/gtk-3.0/*.css", name, path);
-    char *line = NULL;
-    size_t len = 0;
-    int n = 0, ir, ig, ib;
-    FILE *fp = popen (cmd, "r");
-
-    if (fp)
-    {
-        if (getline (&line, &len, fp) > 0)
-        {
-            n = sscanf (line, "#%02x%02x%02x", &ir, &ig, &ib);
-            g_free (line);
-        }
-        pclose (fp);
-    }
-    g_free (cmd);
-    if (n == 3)
-    {
-        *r = ir / 255.0;
-        *g = ig / 255.0;
-        *b = ib / 255.0;
-        return TRUE;
-    }
-    return FALSE;
-}
-
 namespace wf
 {
 namespace decor
@@ -41,35 +13,58 @@ decoration_theme_t::decoration_theme_t()
 {
     float r, g, b;
     gs = g_settings_new ("org.gnome.desktop.interface");
-    char *theme = g_settings_get_string (gs, "gtk-theme");
 
     // read the current colour scheme
-    char *userconf = g_build_filename (g_get_user_data_dir (), "themes/", theme, NULL);
-    char *sysconf = g_build_filename ("/usr/share/themes/", theme, NULL);
-
-    if (read_colour (userconf, "theme_selected_bg_color", &r, &g, &b)
-        || read_colour (sysconf, "theme_selected_bg_color", &r, &g, &b))
-            fg = {r, g, b, 1.0};
+    if (read_colour ("theme_selected_bg_color", &r, &g, &b)) fg = {r, g, b, 1.0};
     else fg = {0.13, 0.13, 0.13, 0.67};
 
-    if (read_colour (userconf, "theme_selected_fg_color", &r, &g, &b)
-        || read_colour (sysconf, "theme_selected_fg_color", &r, &g, &b))
-            fg_text = {r, g, b, 1.0};
+    if (read_colour ("theme_selected_fg_color", &r, &g, &b)) fg_text = {r, g, b, 1.0};
     else fg_text = {1.0, 1.0, 1.0, 1.0};
 
-    if (read_colour (userconf, "theme_unfocused_bg_color", &r, &g, &b)
-        || read_colour (sysconf, "theme_unfocused_bg_color", &r, &g, &b))
-            bg = {r, g, b, 1.0};
+    if (read_colour ("theme_unfocused_bg_color", &r, &g, &b)) bg = {r, g, b, 1.0};
     else bg = {0.2, 0.2, 0.2, 0.87};
 
-    if (read_colour (userconf, "theme_unfocused_fg_color", &r, &g, &b)
-        || read_colour (sysconf, "theme_unfocused_fg_color", &r, &g, &b))
-            bg_text = {r, g, b, 1.0};
+    if (read_colour ("theme_unfocused_fg_color", &r, &g, &b)) bg_text = {r, g, b, 1.0};
     else bg_text = {1.0, 1.0, 1.0, 1.0};
+}
 
-    g_free (sysconf);
-    g_free (userconf);
+gboolean decoration_theme_t::read_colour (const char *name, float *r, float *g, float *b)
+{
+    FILE *fp;
+    char *cmd, *line, *theme;
+    size_t len;
+    int i, n, ir, ig, ib;
+
+    theme = g_settings_get_string (gs, "gtk-theme");
+
+    for (i = 0; i < 2; i++)
+    {
+        line = NULL;
+        len = 0;
+        cmd = g_strdup_printf ("sed -n -e \"s/@define-color[ \t]*%s[ \t]*//p\" %s/themes/%s/gtk-3.0/*.css", name, i ? "/usr/share" : g_get_user_data_dir (), theme);
+        fp = popen (cmd, "r");
+        if (fp)
+        {
+            if (getline (&line, &len, fp) > 0)
+            {
+                n = sscanf (line, "#%02x%02x%02x", &ir, &ig, &ib);
+                g_free (line);
+            }
+            pclose (fp);
+        }
+        g_free (cmd);
+
+        if (n == 3)
+        {
+            *r = ir / 255.0;
+            *g = ig / 255.0;
+            *b = ib / 255.0;
+            g_free (theme);
+            return TRUE;
+        }
+    }
     g_free (theme);
+    return FALSE;
 }
 
 /** @return The available height for displaying the title */
