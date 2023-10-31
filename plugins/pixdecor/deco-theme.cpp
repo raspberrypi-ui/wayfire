@@ -34,7 +34,7 @@ gboolean decoration_theme_t::read_colour (const char *name, wf::color_t &col)
         n = 0;
         line = NULL;
         len = 0;
-        cmd = g_strdup_printf ("sed -n -e \"s/@define-color[ \t]*%s[ \t]*//p\" %s/themes/%s/gtk-3.0/*.css", name, i ? "/usr/share" : g_get_user_data_dir (), theme);
+        cmd = g_strdup_printf ("bash -O extglob -c \"grep -hPo '(?<=@define-color\\s%s\\s)#[0-9A-Fa-f]{6}' %s/themes/%s/gtk-3.0/!(*-dark).css 2> /dev/null\"", name, i ? "/usr/share" : g_get_user_data_dir (), theme);
         fp = popen (cmd, "r");
         if (fp)
         {
