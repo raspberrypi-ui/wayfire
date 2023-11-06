@@ -311,6 +311,16 @@ wf::geometry_t get_xdg_geometry(wlr_xdg_toplevel *toplevel)
     return xdg_geometry;
 }
 
+wf::geometry_t get_buffer_offset(wlr_xdg_toplevel *toplevel)
+{
+    wlr_box xdg_geometry;
+
+    xdg_geometry.x = toplevel->base->surface->sx;
+    xdg_geometry.y = toplevel->base->surface->sy;
+
+    return xdg_geometry;
+}
+
 void wayfire_xdg_view::map(wlr_surface *surface)
 {
     wlr_view_t::map(surface);
@@ -320,25 +330,38 @@ void wayfire_xdg_view::map(wlr_surface *surface)
 void wayfire_xdg_view::commit()
 {
     wlr_view_t::commit();
+    bool use_buffer_offset = false;
 
     /* On each commit, check whether the window geometry of the xdg_surface
      * changed. In those cases, we need to adjust the view's output geometry,
      * so that the apparent wm geometry doesn't change */
     auto wm    = get_wm_geometry();
     auto xdg_g = get_xdg_geometry(xdg_toplevel);
-    if ((xdg_g.x != xdg_surface_offset.x) || (xdg_g.y != xdg_surface_offset.y))
+
+    auto offset = get_buffer_offset(xdg_toplevel);
+
+    if ((offset.x != buffer_offset.x) || (offset.y != buffer_offset.y))
     {
-        xdg_surface_offset = {xdg_g.x, xdg_g.y};
-        /* Note that we just changed the xdg_surface offset, which means we
-         * also changed the wm geometry. Plugins which depend on the
-         * geometry-changed signal however need to receive the appropriate
-         * old geometry */
-        set_position(wm.x, wm.y, wm, true);
+       use_buffer_offset = true;
+       buffer_offset = {offset.x, offset.y};
+       set_position(wm.x, wm.y, wm, true);
+    }
+    else if ((xdg_g.x != xdg_surface_offset.x) || (xdg_g.y != xdg_surface_offset.y))
+    {
+       xdg_surface_offset = {xdg_g.x, xdg_g.y};
+       /* Note that we just changed the xdg_surface offset, which means we
+        * also changed the wm geometry. Plugins which depend on the
+        * geometry-changed signal however need to receive the appropriate
+        * old geometry */
+       set_position(wm.x, wm.y, wm, true);
     }
 
     if (xdg_toplevel->base->current.configure_serial == this->last_configure_serial)
     {
-        this->last_size_request = wf::dimensions(xdg_g);
+       if (use_buffer_offset)
+         this->last_size_request = wf::dimensions(offset);
+       else
+         this->last_size_request = wf::dimensions(xdg_g);
     }
 }
 
@@ -358,8 +381,8 @@ wf::geometry_t wayfire_xdg_view::get_wm_geometry()
     auto xdg_geometry = get_xdg_geometry(xdg_toplevel);
 
     wf::geometry_t wm = {
-        .x     = output_g.x + xdg_surface_offset.x,
-        .y     = output_g.y + xdg_surface_offset.y,
+        .x     = output_g.x + xdg_surface_offset.x - buffer_offset.x,
+        .y     = output_g.y + xdg_surface_offset.y - buffer_offset.y,
         .width = xdg_geometry.width,
         .height = xdg_geometry.height
     };

@@ -45,6 +45,7 @@ class wayfire_xdg_view : public wf::wlr_view_t
         on_set_title, on_set_app_id, on_show_window_menu,
         on_ping_timeout;
 
+    wf::point_t buffer_offset = {0, 0};
     wf::point_t xdg_surface_offset = {0, 0};
     wlr_xdg_toplevel *xdg_toplevel;
     uint32_t last_configure_serial = 0;
