@@ -55,6 +55,7 @@ class wayfire_shadows : public wf::plugin_interface_t
             if (view == wayfire_shadows_globals::last_focused_view) {
                 wayfire_shadows_globals::last_focused_view = nullptr;
             }
+            deinit_view(view);
         }
     };
 
