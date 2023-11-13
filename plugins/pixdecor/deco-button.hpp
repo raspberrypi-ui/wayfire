@@ -76,7 +76,7 @@ class button_t : public noncopyable_t
 
     button_type_t type;
     wf::simple_texture_t button_texture;
-    bool active;
+    bool active = false;
     wf::geometry_t geometry;
 
     /* Whether the button is currently being hovered */
