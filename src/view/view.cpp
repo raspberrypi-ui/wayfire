@@ -1284,27 +1284,31 @@ void wf::view_interface_t::take_snapshot()
 
     offscreen_buffer.allocate(scaled_width, scaled_height);
     offscreen_buffer.scale = scale;
-    if (wlr_texture_is_pixman(offscreen_buffer.texture))
-    {
-        auto wm_geom = get_wm_geometry();
-        auto out_geom = get_output_geometry();
-	if (wm_geom.x > out_geom.x ||
-	    wm_geom.y > out_geom.y)
-	  wlr_pixman_texture_set_op_src_margins(offscreen_buffer.texture,
-						wm_geom.x - buffer_geometry.x,
-						wm_geom.y - buffer_geometry.y,
-						buffer_geometry.width - wm_geom.width - (wm_geom.x - buffer_geometry.x),
-						buffer_geometry.height - wm_geom.height - (wm_geom.y - buffer_geometry.y));
-
-	if (out_geom.x > wm_geom.x ||
-	    out_geom.y > wm_geom.y)
-	  wlr_pixman_texture_set_op_src_margins(offscreen_buffer.texture,
-						out_geom.x - buffer_geometry.x,
-						out_geom.y - buffer_geometry.y,
-						buffer_geometry.width - out_geom.width - (out_geom.x - buffer_geometry.x),
-						buffer_geometry.height - out_geom.height - (out_geom.y - buffer_geometry.y));
+    if (runtime_config.use_pixman && offscreen_buffer.texture) {
+	if (wlr_texture_is_pixman(offscreen_buffer.texture))
+	{
+	    auto wm_geom = get_wm_geometry();
+	    auto out_geom = get_output_geometry();
+	    if (wm_geom.x > out_geom.x ||
+		wm_geom.y > out_geom.y)
+	    {
+		wlr_pixman_texture_set_op_src_margins(offscreen_buffer.texture,
+		    wm_geom.x - buffer_geometry.x,
+		    wm_geom.y - buffer_geometry.y,
+		    buffer_geometry.width - wm_geom.width - (wm_geom.x - buffer_geometry.x),
+		    buffer_geometry.height - wm_geom.height - (wm_geom.y - buffer_geometry.y));
+	    }
+	    if (out_geom.x > wm_geom.x ||
+		out_geom.y > wm_geom.y)
+	    {
+		wlr_pixman_texture_set_op_src_margins(offscreen_buffer.texture,
+		    out_geom.x - buffer_geometry.x,
+		    out_geom.y - buffer_geometry.y,
+		    buffer_geometry.width - out_geom.width - (out_geom.x - buffer_geometry.x),
+		    buffer_geometry.height - out_geom.height - (out_geom.y - buffer_geometry.y));
+	    }
+	}
     }
-
     offscreen_buffer.bind();
     for (auto& box : offscreen_buffer.cached_damage)
     {
