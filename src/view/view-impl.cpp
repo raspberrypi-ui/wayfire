@@ -324,7 +324,8 @@ void wf::wlr_view_t::commit()
     this->last_bounding_box = get_bounding_box();
 
     /* Set non-blending area to render with pixman SRC operator */
-    if (wlr_texture_is_pixman(wlr_surface_get_texture(surface)))
+    if (runtime_config.use_pixman &&
+	wlr_texture_is_pixman(wlr_surface_get_texture(surface)))
     {
         auto wm_geom = get_wm_geometry();
         auto out_geom = get_output_geometry();
