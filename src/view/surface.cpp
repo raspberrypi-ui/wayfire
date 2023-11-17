@@ -13,6 +13,8 @@
 #include "wayfire/signal-definitions.hpp"
 #include "../main.hpp"
 
+#include <glm/gtc/matrix_transform.hpp>
+
 /****************************
 * surface_interface_t functions
 ****************************/
@@ -545,15 +547,65 @@ void wf::wlr_surface_base_t::_simple_render(const wf::framebuffer_t& fb,
         return;
     }
 
+
+
     auto size = this->_get_size();
     wf::geometry_t geometry = {x, y, size.width, size.height};
     wf::texture_t texture{surface};
 
     if (!runtime_config.use_pixman)
      {
+        float angle = 0.0f;
+        float flip = 1.0f;
+        switch (surface->current.transform)
+          {
+           case WL_OUTPUT_TRANSFORM_90:
+             angle = 90.0f;
+             break;
+           case WL_OUTPUT_TRANSFORM_180:
+             angle = 180.0f;
+             break;
+           case WL_OUTPUT_TRANSFORM_270:
+             angle = 270.0f;
+             break;
+           case WL_OUTPUT_TRANSFORM_FLIPPED:
+             flip = -1.0f;
+             break;
+           case WL_OUTPUT_TRANSFORM_FLIPPED_90:
+             angle = 90.0f;
+             flip = -1.0f;
+             break;
+           case WL_OUTPUT_TRANSFORM_FLIPPED_180:
+             angle = 180.0f;
+             flip = -1.0f;
+             break;
+           case WL_OUTPUT_TRANSFORM_FLIPPED_270:
+             angle = 270.0f;
+             flip = -1.0f;
+             break;
+           default:
+             break;
+          }
         OpenGL::render_begin(fb);
-        OpenGL::render_texture(texture, fb, geometry, glm::vec4(1.f),
-                               OpenGL::RENDER_FLAG_CACHED);
+        if (surface->current.transform == WL_OUTPUT_TRANSFORM_NORMAL)
+          {
+             OpenGL::render_texture(texture, fb, geometry, glm::vec4(1.f),
+                                    OpenGL::RENDER_FLAG_CACHED);
+          }
+        else
+          {
+             gl_geometry gg{-0.5f, -0.5, 0.5f, 0.5f};
+             glm::mat4 transform = fb.get_orthographic_projection() *
+                                   glm::translate(glm::mat4(1.f), glm::vec3(geometry.x, geometry.y, 0.f)) *
+                                   glm::scale(glm::mat4(1.f), glm::vec3(geometry.width, geometry.height, 1.f)) *
+                                   glm::translate(glm::mat4(1.f), glm::vec3(0.5f, 0.5f, 0.f)) *
+                                   glm::rotate(glm::mat4(1.f), glm::radians(angle), glm::vec3(0.f, 0.f, flip)) *
+                                   glm::scale(glm::mat4(1.f), glm::vec3(flip, 1.f, 1.f));
+             OpenGL::render_transformed_texture(texture, gg, {}, transform,
+                                                glm::vec4(1.f),
+                                                OpenGL::RENDER_FLAG_CACHED);
+          }
+
         // use GL_NEAREST for integer scale.
         // GL_NEAREST makes scaled text blocky instead of blurry, which looks better
         // but only for integer scale.
