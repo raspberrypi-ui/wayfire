@@ -48,6 +48,9 @@ class decoration_shadow_t {
         wlr_texture *shadow_texture[4];
         wf::geometry_t cached_geometry;
         bool cached_glow;
+        float cached_sigma;
+        glm::vec4 cached_premultiplied;
+        uint32_t *shadow_proc_image[2];
         uint32_t *shadow_image[4];
 };
 

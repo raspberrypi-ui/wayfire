@@ -98,28 +98,69 @@ void wf::winshadows::decoration_shadow_t::generate_shadow_texture(wf::point_t wi
     glm::vec2 lower = {shadow_x, shadow_y};
     glm::vec2 upper = {shadow_x + inner_w, shadow_y + inner_h};
 
+    size_t l_width = narrow_width + radius + 1;
+    size_t l_height = narrow_height + radius + 1;
 
-    /* Generate the top left shadow of the window, and mirror it to compute the top right part.
+    /* Pre-generate the top left shadow of the window, as well as the
+     * left top shadow; as it only changes if we change the plugin
+     * options, we can cache it.
      *
-     * And mirror the full top shadow to compute the full bottom shadow.
+     * This will be used as seed to generate the rest of the shadow by
+     * copying and mirroring.
+    */
+    if (shadow_proc_image[0] == NULL || cached_glow != use_glow ||
+	cached_premultiplied != premultiplied || cached_sigma != sigma) {
+	if (shadow_proc_image[0] == NULL) {
+	  shadow_proc_image[0] = (uint32_t*)malloc(l_width*narrow_height*sizeof(uint32_t));
+	  shadow_proc_image[1] = (uint32_t*)malloc(narrow_width*l_height*sizeof(uint32_t));
+	} else {
+	  shadow_proc_image[0] = (uint32_t*)realloc(shadow_proc_image[0], l_width*narrow_height*sizeof(uint32_t));
+	  shadow_proc_image[1] = (uint32_t*)realloc(shadow_proc_image[1], narrow_width*l_height*sizeof(uint32_t));
+	}
+
+	for(size_t y = 0; y < narrow_height; y++) {
+	    for(size_t x = 0; x < l_width; x++) {
+		glm::vec2 point{(float)x + bounds.x, (float)y + bounds.y};
+		glm::vec4 out = premultiplied * box_shadow(lower, upper, point, sigma);
+		if (use_glow)
+		    {
+			out += glow_premultiplied * box_shadow(glow_lower, glow_upper, point, glow_sigma);
+		    }
+		shadow_proc_image[0][y*l_width + x] = vec4_to_bgr(out);
+	    }
+	}
+
+	for(size_t y = 0; y < l_height; y++) {
+	    for(size_t x = 0; x < narrow_width; x++){
+		glm::vec2 point{(float)x + bounds.x, (float)y + narrow_height + bounds.y};
+		glm::vec4 out = premultiplied * box_shadow(lower, upper, point, sigma);
+		if (use_glow)
+		    {
+			out += glow_premultiplied * box_shadow(glow_lower, glow_upper, point, glow_sigma);
+		    }
+		shadow_proc_image[1][y*narrow_width + x] = vec4_to_bgr(out);
+	    }
+	}
+    }
+
+    /* Use the pre-generated cached shadow to geneate the rest of the shadows.
+     * 1. Generate the half left part of the top shadow
      *
-     * When computing the top left shadow, instead of fully computing
-     * it, just compute the corner plus a small part, and then
-     * replicate horizontally the rest of the shadow
+     * 2. Mirror it vertically to generate half right part of the top
+     * shadow.
+     *
+     * 3. Mirror the full top shadow horizontally to generate the
+     * bottom shadow.
+     *
+     * 4. Repeat the same steps to generate the left and right
+     * shadows.
      */
-    size_t l_width = narrow_width + radius;
     for(size_t y = 0; y < narrow_height; y++) {
       for(size_t x = 0; x < (width + 1)/2; x++) {
-	if (x > l_width) {
-	  shadow_image[0][y*width + x] = shadow_image[0][y*width + l_width];
+	if (x >= l_width) {
+	    shadow_image[0][y*width + x] = shadow_proc_image[0][y*l_width + l_width - 1];
 	} else {
-	  glm::vec2 point{(float)x + bounds.x, (float)y + bounds.y};
-	  glm::vec4 out = premultiplied * box_shadow(lower, upper, point, sigma);
-	  if (use_glow)
-	    {
-	      out += glow_premultiplied * box_shadow(glow_lower, glow_upper, point, glow_sigma);
-	    }
-	  shadow_image[0][y*width + x] = vec4_to_bgr(out);
+	    shadow_image[0][y*width + x] = shadow_proc_image[0][y*l_width + x];
 	}
 	shadow_image[0][y*width + (width - x - 1)] = shadow_image[0][y*width + x];
 	shadow_image[1][(narrow_height - y - 1)*width + x] = shadow_image[0][y*width + x];
@@ -127,21 +168,12 @@ void wf::winshadows::decoration_shadow_t::generate_shadow_texture(wf::point_t wi
       }
     }
 
-    /* Like the above step, but now for the left and right shadows of
-       the window */
-    size_t l_height = narrow_height + radius;
     for(size_t y = 0; y < (size_t)(window_geometry.height + 1)/2; y++) {
       for(size_t x = 0; x < narrow_width; x++) {
-	if (y > l_height) {
-	  shadow_image[2][y*narrow_width + x] = shadow_image[2][l_height*narrow_width + x];
+	if (y >= l_height) {
+	    shadow_image[2][y*narrow_width + x] = shadow_proc_image[1][(l_height - 1)*narrow_width + x];
 	} else {
-	  glm::vec2 point{(float)x + bounds.x, (float)y + narrow_height + bounds.y};
-	  glm::vec4 out = premultiplied * box_shadow(lower, upper, point, sigma);
-	  if (use_glow)
-	    {
-	      out += glow_premultiplied * box_shadow(glow_lower, glow_upper, point, glow_sigma);
-	    }
-	  shadow_image[2][y*narrow_width + x] = vec4_to_bgr(out);
+	    shadow_image[2][y*narrow_width + x] = shadow_proc_image[1][y*narrow_width + x];
 	}
 	shadow_image[2][(window_geometry.height - y - 1)*narrow_width + x] = shadow_image[2][y*narrow_width + x];
 	shadow_image[3][y*narrow_width + (narrow_width - x - 1)] = shadow_image[2][y*narrow_width + x];
@@ -162,6 +194,8 @@ void wf::winshadows::decoration_shadow_t::generate_shadow_texture(wf::point_t wi
 
     cached_geometry = outer_geometry;
     cached_glow = use_glow;
+    cached_premultiplied = premultiplied;
+    cached_sigma = sigma;
 }
 
 wf::winshadows::decoration_shadow_t::decoration_shadow_t() {
@@ -175,6 +209,7 @@ wf::winshadows::decoration_shadow_t::decoration_shadow_t() {
         );
         OpenGL::render_end();
     } else {
+        shadow_proc_image[0] = NULL;
         shadow_image[0] = NULL;
         shadow_texture[0] = NULL;
     }
@@ -189,6 +224,7 @@ wf::winshadows::decoration_shadow_t::~decoration_shadow_t() {
     } else {
 	destroy_textures(shadow_texture, 4);
 	destroy_images(shadow_image, 4);
+	destroy_images(shadow_proc_image, 2);
     }
 }
 
