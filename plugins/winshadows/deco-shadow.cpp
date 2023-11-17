@@ -26,6 +26,19 @@ static uint32_t vec4_to_bgr(glm::vec4 col) {
     return (b << 0) | (g << 8) | (r << 16) | (a << 24);
 }
 
+static void destroy_textures(wlr_texture **textures, int len)
+{
+    if (textures[0] != NULL)
+	for (int i = 0; i < len; i++)
+	    wlr_texture_destroy(textures[i]);
+}
+
+static void destroy_images(uint32_t **images, int len)
+{
+    if (images[0] != NULL)
+	for (int i = 0; i < len; i++)
+	    free(images[i]);
+}
 void wf::winshadows::decoration_shadow_t::generate_shadow_texture(wf::point_t window_origin, bool glow) {
     auto renderer = wf::get_core().renderer;
     auto formats = wlr_renderer_get_render_formats(renderer);
@@ -136,12 +149,8 @@ void wf::winshadows::decoration_shadow_t::generate_shadow_texture(wf::point_t wi
       }
     }
 
-    if (shadow_texture[0] != NULL) {
-        wlr_texture_destroy(shadow_texture[0]);
-        wlr_texture_destroy(shadow_texture[1]);
-        wlr_texture_destroy(shadow_texture[2]);
-        wlr_texture_destroy(shadow_texture[3]);
-    }
+    destroy_textures(shadow_texture, 4);
+
     shadow_texture[0] = wlr_texture_from_pixels(renderer, format[0].format, width*sizeof(uint32_t),
                                                 width, narrow_height, shadow_image[0]);
     shadow_texture[1] = wlr_texture_from_pixels(renderer, format[0].format, width*sizeof(uint32_t),
@@ -177,6 +186,9 @@ wf::winshadows::decoration_shadow_t::~decoration_shadow_t() {
         shadow_program.free_resources();
         shadow_glow_program.free_resources();
         OpenGL::render_end();
+    } else {
+	destroy_textures(shadow_texture, 4);
+	destroy_images(shadow_image, 4);
     }
 }
 
