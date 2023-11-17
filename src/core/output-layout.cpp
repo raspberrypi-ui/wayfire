@@ -408,6 +408,7 @@ struct output_layout_output_t
     output_layout_output_t(wlr_output *handle)
     {
         this->handle = handle;
+        this->current_state = {};
         on_destroy.connect(&handle->events.destroy);
         if (runtime_config.use_liftoff)
         {
