@@ -627,11 +627,30 @@ void wf::wlr_surface_base_t::_simple_render(const wf::framebuffer_t& fb,
      {
         wlr_log(WLR_DEBUG, "Pixman surface simple_render render_texture");
 
+        // Directly using `wl_out_transform_rotation` in pixman seems
+        // to rotate in the opposite direction of what's expected.
+        // In order to rotate correctly, and match other compositors like Sway
+        // mutter, and weston we must flip the 90 and 270 deg cases.
+        enum wl_output_transform rotation = surface->current.transform;
+        switch(rotation)
+          {
+           case WL_OUTPUT_TRANSFORM_90:
+             rotation = WL_OUTPUT_TRANSFORM_270;
+             break;
+           case WL_OUTPUT_TRANSFORM_270:
+             rotation = WL_OUTPUT_TRANSFORM_90;
+             break;
+          }
+
+        gl_geometry gg{geometry.x, geometry.y, geometry.x + geometry.width, geometry.y + geometry.height};
+        float mat[9];
+        fb.get_orthographic_projection(mat);
+
         Pixman::render_begin(fb);
         for (const auto& rect : damage)
           {
              fb.logic_scissor(wlr_box_from_pixman_box(rect));
-             Pixman::render_texture(texture, fb, geometry, glm::vec4(1.f));
+             Pixman::render_transformed_texture(texture.texture, gg, {}, mat, glm::vec4(1.f), rotation);
           }
         Pixman::render_end();
      }

@@ -22,7 +22,7 @@ namespace Pixman
    void render_rectangle(wf::geometry_t box, wf::color_t color, glm::mat4 matrix);
    void render_texture(struct wlr_texture *texture, const wf::framebuffer_t& framebuffer, const wf::geometry_t& geometry, glm::vec4 color = glm::vec4(1.f));
    void render_texture(wf::texture_t texture, const wf::framebuffer_t& framebuffer, const wf::geometry_t& geometry, glm::vec4 color = glm::vec4(1.f));
-   void render_transformed_texture(struct wlr_texture *tex, const gl_geometry& g, const gl_geometry& texg, float transform[9], glm::vec4 color = glm::vec4(1.f));
+   void render_transformed_texture(struct wlr_texture *tex, const gl_geometry& g, const gl_geometry& texg, float transform[9], glm::vec4 color = glm::vec4(1.f), enum wl_output_transform rotation = WL_OUTPUT_TRANSFORM_NORMAL);
    void render_transformed_texture(struct wlr_texture *tex, const wf::geometry_t& geometry, float transform[9], glm::vec4 color = glm::vec4(1.f));
    void render_end();
    void clear(wf::color_t color);

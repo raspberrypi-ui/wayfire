@@ -180,7 +180,7 @@ namespace Pixman
 				  color);
      }
 
-   void render_transformed_texture(struct wlr_texture *tex, const gl_geometry& g, const gl_geometry& texg, float transform[9], glm::vec4 color)
+   void render_transformed_texture(struct wlr_texture *tex, const gl_geometry& g, const gl_geometry& texg, float transform[9], glm::vec4 color, enum wl_output_transform rotation)
      {
         float mat[9];
 
@@ -211,7 +211,7 @@ namespace Pixman
         //                        output->handle->transform_matrix);
         // wlr_matrix_project_box(mat, &wbox, WL_OUTPUT_TRANSFORM_NORMAL, 0,
         //                        fm);
-        wlr_matrix_project_box(mat, &wbox, WL_OUTPUT_TRANSFORM_NORMAL, 0,
+        wlr_matrix_project_box(mat, &wbox, rotation, 0,
                                transform);
         wlr_render_texture_with_matrix(renderer, tex, mat, (float)color.a);
         // wlr_render_texture_with_matrix(renderer, tex, transform, (float)color.a);
