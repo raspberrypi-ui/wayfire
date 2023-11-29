@@ -174,9 +174,6 @@ class view_3D : public view_transformer_t
     static glm::mat4 default_proj_matrix();
 };
 
-/* create a matrix which corresponds to the inverse of the given transform */
-glm::mat4 get_output_matrix_from_transform(wl_output_transform transform);
-
 /* a matrix which can be used to render wf::geometry_t directly */
 glm::mat4 output_get_projection(wf::output_t *output);
 }

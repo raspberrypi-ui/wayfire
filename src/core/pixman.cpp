@@ -353,4 +353,48 @@ namespace Pixman
                                in);
         wlr_render_texture_with_matrix(renderer, src.texture, out, 1.0f);
      }
+
+  /* look up the actual values of wl_output_transform enum
+   * All _flipped transforms have values (regular_transfrom + 4) */
+  glm::mat4 get_output_matrix_from_transform(wf::framebuffer_t& fb, wl_output_transform transform)
+  {
+      glm::mat4 scale = glm::mat4(1.0f);
+
+      if (transform >= 4)
+      {
+	  scale = glm::scale(scale, {-1, 1, 1});
+      }
+
+      /* remove the third bit if it's set */
+      uint32_t rotation = transform & (~4);
+      glm::mat4 rotation_matrix(1.0);
+
+      int postrotate_width = fb.geometry.width;
+      int postrotate_height = fb.geometry.height;
+
+      if (rotation == WL_OUTPUT_TRANSFORM_90)
+      {
+	  rotation_matrix = glm::rotate(rotation_matrix, glm::radians(270.0f), {0, 0, 1});
+	  postrotate_width = fb.geometry.height;
+	  postrotate_height = fb.geometry.width;
+      }
+
+      if (rotation == WL_OUTPUT_TRANSFORM_180)
+      {
+	  rotation_matrix = glm::rotate(rotation_matrix, glm::radians(180.0f), {0, 0, 1});
+      }
+
+      if (rotation == WL_OUTPUT_TRANSFORM_270)
+      {
+	  rotation_matrix = glm::rotate(rotation_matrix, glm::radians(90.0f), {0, 0, 1});
+	  postrotate_width = fb.geometry.height;
+	  postrotate_height = fb.geometry.width;
+      }
+
+      return glm::translate(glm::mat4(1.0f),
+			    glm::vec3(postrotate_width / 2, postrotate_height / 2, 1)) *
+	  rotation_matrix * scale *
+	  glm::translate(glm::mat4(1.0f),
+			 glm::vec3(-fb.geometry.width / 2, -fb.geometry.height / 2, 1));
+  }
 }

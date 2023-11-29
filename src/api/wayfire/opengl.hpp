@@ -49,6 +49,9 @@ void render_end();
 /* Clear the currently bound framebuffer with the given color */
 void clear(wf::color_t color, uint32_t mask = GL_COLOR_BUFFER_BIT);
 
+/* utils */
+glm::mat4 get_output_matrix_from_transform(wl_output_transform transform);
+
 
 enum rendering_flags_t
 {
@@ -259,8 +262,5 @@ class program_t : public noncopyable_t
     std::unique_ptr<impl> priv;
 };
 }
-
-/* utils */
-glm::mat4 get_output_matrix_from_transform(wl_output_transform transform);
 
 #endif // WF_OPENGL_HPP

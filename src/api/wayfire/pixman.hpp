@@ -27,6 +27,7 @@ namespace Pixman
    void render_end();
    void clear(wf::color_t color);
    void fb_blit(const wf::framebuffer_base_t& src, const wf::framebuffer_base_t& dest, int sx, int sy, int sw, int sh, int dx, int dy, int dw, int dh, const float zoom);
+   glm::mat4 get_output_matrix_from_transform(wf::framebuffer_t& fb, wl_output_transform transform);
 }
 
 #endif

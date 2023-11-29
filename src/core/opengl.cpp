@@ -380,7 +380,6 @@ void render_end()
     GL_CALL(glBindFramebuffer(GL_FRAMEBUFFER, current_output_fb));
     GL_CALL(glDisable(GL_SCISSOR_TEST));
 }
-}
 
 /* look up the actual values of wl_output_transform enum
  * All _flipped transforms have values (regular_transfrom + 4) */
@@ -416,6 +415,7 @@ glm::mat4 get_output_matrix_from_transform(wl_output_transform transform)
     }
 
     return rotation_matrix * scale;
+}
 }
 
 namespace OpenGL
