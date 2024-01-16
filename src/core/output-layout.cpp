@@ -1431,21 +1431,37 @@ class output_layout_t::impl
         });
     }
 
+    void add_wlr_config_head_from_output(
+                    wlr_output_configuration_v1 *config, wlr_output* output)
+    {
+        auto head = wlr_output_configuration_head_v1_create(config, output);
+
+        wlr_box box;
+        wlr_output_layout_get_box(output_layout, output, &box);
+        if (wlr_box_empty(&box))
+        {
+            head->state.x = 0;
+            head->state.y = 0;
+        } else
+        {
+            head->state.x = box.x;
+            head->state.y = box.y;
+        }
+    }
+
     void send_wlr_configuration()
     {
         auto wlr_configuration = wlr_output_configuration_v1_create();
-        for (auto& output : outputs)
-        {
-            auto head = wlr_output_configuration_head_v1_create(
-                wlr_configuration, output.first);
 
-            wlr_box box;
-            wlr_output_layout_get_box(output_layout, output.first, &box);
-            if (!wlr_box_empty(&box))
+        if (!outputs.empty()) {
+            for (auto& output : outputs)
             {
-                head->state.x = box.x;
-                head->state.y = box.y;
+                add_wlr_config_head_from_output(wlr_configuration,
+                        output.first);
             }
+        } else if (noop_output) {
+            add_wlr_config_head_from_output(wlr_configuration,
+                    noop_output->handle);
         }
 
         wlr_output_manager_v1_set_configuration(output_manager,
