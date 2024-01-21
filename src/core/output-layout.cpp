@@ -1409,6 +1409,17 @@ class output_layout_t::impl
             }
         }
 
+        for (auto& entry : config)
+        {
+            auto& handle = entry.first;
+            auto state   = entry.second;
+
+            if (handle == noop_output->handle) {
+                noop_output->apply_state(state);
+                wlr_output_layout_add_auto(output_layout, noop_output->handle);
+            }
+        }
+
         get_core().output_layout->emit_signal("configuration-changed", nullptr);
 
         if (count_enabled > 0)
