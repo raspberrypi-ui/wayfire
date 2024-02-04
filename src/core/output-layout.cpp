@@ -875,6 +875,11 @@ class output_layout_t::impl
         {
             ensure_noop_output();
         }
+
+        idle_update_configuration.run_once([=] ()
+        {
+            send_wlr_configuration();
+        });
     };
 
     void deinit_noop()
