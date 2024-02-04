@@ -418,7 +418,8 @@ struct output_layout_output_t
 
     wlr_output_mode select_default_mode()
     {
-        wlr_output_mode *mode, *fallback;
+        wlr_output_mode *mode;
+        wlr_output_mode *fallback = nullptr;
         int w = 0, h = 0, r = 0;
         wl_list_for_each(mode, &handle->modes, link)
         {
@@ -436,13 +437,9 @@ struct output_layout_output_t
             }
         }
 
-
-        /* Couldn't find a preferred mode. Just return the last, which is
-         * usually also the "largest" */
-        wl_list_for_each_reverse(mode, &handle->modes, link)
-
-        return *fallback;
-        return *mode;
+        if (fallback) {
+            return *fallback;
+        }
 
         /* Finally, if there isn't any mode (for ex. wayland backend),
          * try the wlr_output resolution, falling back to 1200x720
