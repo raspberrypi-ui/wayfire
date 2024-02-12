@@ -418,7 +418,8 @@ struct output_layout_output_t
 
     wlr_output_mode select_default_mode()
     {
-        wlr_output_mode *mode, *fallback;
+        wlr_output_mode *mode;
+        wlr_output_mode *fallback = nullptr;
         int w = 0, h = 0, r = 0;
         wl_list_for_each(mode, &handle->modes, link)
         {
@@ -436,13 +437,9 @@ struct output_layout_output_t
             }
         }
 
-
-        /* Couldn't find a preferred mode. Just return the last, which is
-         * usually also the "largest" */
-        wl_list_for_each_reverse(mode, &handle->modes, link)
-
-        return *fallback;
-        return *mode;
+        if (fallback) {
+            return *fallback;
+        }
 
         /* Finally, if there isn't any mode (for ex. wayland backend),
          * try the wlr_output resolution, falling back to 1200x720
@@ -643,20 +640,7 @@ struct output_layout_output_t
     /** Check whether the given state can be applied */
     bool test_state(const output_state_t& state)
     {
-        if (state.source == OUTPUT_IMAGE_SOURCE_NONE)
-        {
-            return true;
-        }
-
-        if (state.source == OUTPUT_IMAGE_SOURCE_MIRROR)
-        {
-            return true;
-        }
-
-        /* XXX: are there more things to check? */
-        refresh_custom_modes();
-
-        return is_mode_supported(state.mode);
+        return true;
     }
 
     /** Change the output mode */
@@ -688,8 +672,7 @@ struct output_layout_output_t
                 " for output ", handle->name, ". Trying to use custom mode",
                 "(might not work)");
 
-            wlr_output_set_custom_mode(handle, mode.width, mode.height,
-                mode.refresh);
+            wlr_output_set_custom_mode(handle, mode.width, mode.height, mode.refresh);
         }
 
         wlr_output_commit(handle);
@@ -889,6 +872,11 @@ class output_layout_t::impl
         {
             ensure_noop_output();
         }
+
+        idle_update_configuration.run_once([=] ()
+        {
+            send_wlr_configuration();
+        });
     };
 
     void deinit_noop()
@@ -961,13 +949,6 @@ class output_layout_t::impl
         wlr_output_configuration_head_v1 *head;
         wl_list_for_each(head, &configuration->heads, link)
         {
-            if (!this->outputs.count(head->state.output))
-            {
-                LOGE("Output configuration request contains unknown",
-                    " output, probably a compositor bug!");
-                continue;
-            }
-
             auto& handle = head->state.output;
             auto& state  = result[handle];
 
@@ -978,8 +959,17 @@ class output_layout_t::impl
             }
 
             state.source = OUTPUT_IMAGE_SOURCE_SELF;
-            state.mode   = head->state.mode ? *head->state.mode :
-                this->outputs[handle]->current_state.mode;
+
+            if (head->state.mode)
+            {
+                state.mode = *head->state.mode;
+            } else
+            {
+                state.mode.width   = head->state.custom_mode.width;
+                state.mode.height  = head->state.custom_mode.height;
+                state.mode.refresh = head->state.custom_mode.refresh;
+            }
+
             state.position  = {head->state.x, head->state.y};
             state.scale     = head->state.scale;
             state.transform = head->state.transform;
@@ -1258,7 +1248,8 @@ class output_layout_t::impl
     /** Check whether the given configuration can be applied */
     bool test_configuration(const output_configuration_t& config)
     {
-        if (config.size() != this->outputs.size())
+        auto n_outputs = this->outputs.empty() ? 1 : this->outputs.size();
+        if (config.size() != n_outputs)
         {
             return false;
         }
@@ -1266,12 +1257,12 @@ class output_layout_t::impl
         bool ok = true;
         for (auto& entry : config)
         {
-            if (this->outputs.count(entry.first) == 0)
-            {
-                return false;
+            if (this->outputs.count(entry.first) != 0) {
+                ok &= this->outputs[entry.first]->test_state(entry.second);
+            } else if (this->outputs.empty() && noop_output &&
+                    noop_output->handle == entry.first) {
+                ok &= this->noop_output->test_state(entry.second);
             }
-
-            ok &= this->outputs[entry.first]->test_state(entry.second);
         }
 
         /* Check overlapping outputs */
@@ -1339,7 +1330,11 @@ class output_layout_t::impl
         {
             auto& handle = entry.first;
             auto& state  = entry.second;
-            auto& lo     = this->outputs[handle];
+            auto it      = this->outputs.find(handle);
+            if (it == this->outputs.end()) {
+                continue;
+            }
+            auto& lo = it->second;
 
             if (!(state.source & OUTPUT_IMAGE_SOURCE_SELF))
             {
@@ -1359,7 +1354,11 @@ class output_layout_t::impl
         {
             auto& handle = entry.first;
             auto& state  = entry.second;
-            auto& lo     = this->outputs[handle];
+            auto it      = this->outputs.find(handle);
+            if (it == this->outputs.end()) {
+                continue;
+            }
+            auto& lo = it->second;
 
             if (state.source & OUTPUT_IMAGE_SOURCE_SELF &&
                 !entry.second.position.is_automatic_position())
@@ -1380,7 +1379,11 @@ class output_layout_t::impl
         for (auto& entry : config)
         {
             auto& handle = entry.first;
-            auto& lo     = this->outputs[handle];
+            auto it      = this->outputs.find(handle);
+            if (it == this->outputs.end()) {
+                continue;
+            }
+            auto& lo = it->second;
             auto state   = entry.second;
             if (state.source & OUTPUT_IMAGE_SOURCE_SELF &&
                 entry.second.position.is_automatic_position())
@@ -1405,12 +1408,27 @@ class output_layout_t::impl
         {
             auto& handle = entry.first;
             auto& state  = entry.second;
-            auto& lo     = this->outputs[handle];
+            auto it      = this->outputs.find(handle);
+            if (it == this->outputs.end()) {
+                continue;
+            }
+            auto& lo = it->second;
 
             if (state.source == OUTPUT_IMAGE_SOURCE_MIRROR)
             {
                 lo->apply_state(state);
                 wlr_output_layout_remove(output_layout, handle);
+            }
+        }
+
+        for (auto& entry : config)
+        {
+            auto& handle = entry.first;
+            auto state   = entry.second;
+
+            if (noop_output && handle == noop_output->handle) {
+                noop_output->apply_state(state);
+                wlr_output_layout_add_auto(output_layout, noop_output->handle);
             }
         }
 
@@ -1436,21 +1454,37 @@ class output_layout_t::impl
         });
     }
 
+    void add_wlr_config_head_from_output(
+                    wlr_output_configuration_v1 *config, wlr_output* output)
+    {
+        auto head = wlr_output_configuration_head_v1_create(config, output);
+
+        wlr_box box;
+        wlr_output_layout_get_box(output_layout, output, &box);
+        if (wlr_box_empty(&box))
+        {
+            head->state.x = 0;
+            head->state.y = 0;
+        } else
+        {
+            head->state.x = box.x;
+            head->state.y = box.y;
+        }
+    }
+
     void send_wlr_configuration()
     {
         auto wlr_configuration = wlr_output_configuration_v1_create();
-        for (auto& output : outputs)
-        {
-            auto head = wlr_output_configuration_head_v1_create(
-                wlr_configuration, output.first);
 
-            wlr_box box;
-            wlr_output_layout_get_box(output_layout, output.first, &box);
-            if (!wlr_box_empty(&box))
+        if (!outputs.empty()) {
+            for (auto& output : outputs)
             {
-                head->state.x = box.x;
-                head->state.y = box.y;
+                add_wlr_config_head_from_output(wlr_configuration,
+                        output.first);
             }
+        } else if (noop_output) {
+            add_wlr_config_head_from_output(wlr_configuration,
+                    noop_output->handle);
         }
 
         wlr_output_manager_v1_set_configuration(output_manager,
