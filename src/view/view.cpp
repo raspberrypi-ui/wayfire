@@ -271,7 +271,7 @@ void wf::view_interface_t::ping()
 
 void wf::view_interface_t::close()
 {
-    /* no-op */
+    view_impl->decoration->priv->_closing = true;
 }
 
 wf::geometry_t wf::view_interface_t::get_wm_geometry()

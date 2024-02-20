@@ -30,6 +30,7 @@ class surface_interface_t::impl
      * subtract_opaque(), send_frame_done(), etc. work for the surface
      */
     wlr_surface *wsurface = nullptr;
+    bool _closing = false;
 };
 
 /**

@@ -310,8 +310,9 @@ void wf::touch_interface_t::handle_touch_motion(int32_t id, uint32_t time,
     } else
     {
         surface = surface_at(point, local);
-        set_touch_focus(surface, id, time, local);
     }
+
+    if (surface->priv->_closing) return;
 
     wlr_seat_touch_notify_motion(seat->seat, time, id, local.x, local.y);
     seat->update_drag_icon();
