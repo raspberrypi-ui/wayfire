@@ -46,6 +46,7 @@ decoration_theme_t::~decoration_theme_t()
     wl_event_source_remove (evsrc);
     inotify_rm_watch (inotify_fd, wd_cfg_file);
     inotify_rm_watch (inotify_fd, wd_cfg_dir);
+    close (inotify_fd);
 }
 
 void decoration_theme_t::update_colours (void)
